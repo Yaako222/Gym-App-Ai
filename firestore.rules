@@ -1,0 +1,103 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function hasOnlyAllowedFields(allowedFields) {
+      return request.resource.data.keys().hasOnly(allowedFields);
+    }
+
+    function hasRequiredFields(requiredFields) {
+      return request.resource.data.keys().hasAll(requiredFields);
+    }
+
+    function isFriend(userId) {
+      let friendshipId1 = request.auth.uid + '_' + userId;
+      let friendshipId2 = userId + '_' + request.auth.uid;
+      return isAuthenticated() && (
+        exists(/databases/$(database)/documents/friendships/$(friendshipId1)) && get(/databases/$(database)/documents/friendships/$(friendshipId1)).data.status == 'accepted' ||
+        exists(/databases/$(database)/documents/friendships/$(friendshipId2)) && get(/databases/$(database)/documents/friendships/$(friendshipId2)).data.status == 'accepted'
+      );
+    }
+
+    function isValidPlan() {
+      return hasOnlyAllowedFields(['id', 'name', 'dayOfWeek', 'dateAdded', 'muscleGroup', 'userId']) &&
+             hasRequiredFields(['id', 'name', 'dayOfWeek', 'dateAdded', 'muscleGroup', 'userId']) &&
+             request.resource.data.id is string &&
+             request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 100 &&
+             request.resource.data.dayOfWeek is string && request.resource.data.dayOfWeek in ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'] &&
+             request.resource.data.dateAdded is string &&
+             request.resource.data.muscleGroup is string &&
+             request.resource.data.userId == request.auth.uid;
+    }
+
+    function isValidLog() {
+      return hasOnlyAllowedFields(['id', 'planId', 'name', 'weight', 'unit', 'reps', 'steps', 'duration', 'date', 'muscleGroup', 'userId']) &&
+             hasRequiredFields(['id', 'planId', 'name', 'date', 'muscleGroup', 'userId']) &&
+             request.resource.data.id is string &&
+             request.resource.data.planId is string &&
+             request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 100 &&
+             request.resource.data.date is string &&
+             request.resource.data.muscleGroup is string &&
+             request.resource.data.userId == request.auth.uid &&
+             (!('weight' in request.resource.data) || request.resource.data.weight is number) &&
+             (!('unit' in request.resource.data) || request.resource.data.unit in ['kg', 'lbs']) &&
+             (!('reps' in request.resource.data) || request.resource.data.reps is number) &&
+             (!('steps' in request.resource.data) || request.resource.data.steps is number) &&
+             (!('duration' in request.resource.data) || request.resource.data.duration is number);
+    }
+
+    function isValidUserProfile() {
+      return hasOnlyAllowedFields(['uid', 'username', 'searchableUsername', 'displayName', 'photoURL']) &&
+             hasRequiredFields(['uid', 'username', 'searchableUsername']) &&
+             request.resource.data.uid == request.auth.uid &&
+             request.resource.data.username is string && request.resource.data.username.size() >= 3 && request.resource.data.username.size() <= 30 &&
+             request.resource.data.searchableUsername is string &&
+             (!('displayName' in request.resource.data) || request.resource.data.displayName is string) &&
+             (!('photoURL' in request.resource.data) || request.resource.data.photoURL is string);
+    }
+
+    function isValidFriendship() {
+      return hasOnlyAllowedFields(['user1', 'user2', 'status', 'createdAt']) &&
+             hasRequiredFields(['user1', 'user2', 'status', 'createdAt']) &&
+             request.resource.data.user1 is string &&
+             request.resource.data.user2 is string &&
+             request.resource.data.status in ['pending', 'accepted'] &&
+             request.resource.data.createdAt is string &&
+             (request.auth.uid == request.resource.data.user1 || request.auth.uid == request.resource.data.user2);
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) && isValidUserProfile();
+      allow update: if isOwner(userId) && isValidUserProfile() && request.resource.data.uid == resource.data.uid;
+      
+      match /plans/{planId} {
+        allow read: if isOwner(userId) || isFriend(userId);
+        allow create: if isOwner(userId) && isValidPlan();
+        allow update: if isOwner(userId) && isValidPlan() && request.resource.data.userId == resource.data.userId;
+        allow delete: if isOwner(userId);
+      }
+      match /logs/{logId} {
+        allow read: if isOwner(userId) || isFriend(userId);
+        allow create: if isOwner(userId) && isValidLog();
+        allow update: if isOwner(userId) && isValidLog() && request.resource.data.userId == resource.data.userId;
+        allow delete: if isOwner(userId);
+      }
+    }
+
+    match /friendships/{friendshipId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.user1 || request.auth.uid == resource.data.user2);
+      allow create: if isAuthenticated() && isValidFriendship();
+      allow update: if isAuthenticated() && isValidFriendship() && (request.auth.uid == resource.data.user1 || request.auth.uid == resource.data.user2);
+      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.user1 || request.auth.uid == resource.data.user2);
+    }
+  }
+}
