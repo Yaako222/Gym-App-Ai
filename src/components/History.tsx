@@ -107,7 +107,7 @@ export default function History({ logs, plans }: HistoryProps) {
                     {editingLog?.id === log.id ? (
                       <div className="space-y-3">
                         <h4 className="font-medium text-white">{log.name}</h4>
-                        {log.muscleGroup !== 'Cardio' ? (
+                        {log.muscleGroup !== 'cardio' ? (
                           <div className="flex gap-2">
                             <input 
                               type="number" 
@@ -148,7 +148,7 @@ export default function History({ logs, plans }: HistoryProps) {
                           </div>
                         </div>
                         <div className="flex flex-wrap gap-2 text-sm text-slate-300">
-                          {log.muscleGroup !== 'Cardio' ? (
+                          {log.muscleGroup !== 'cardio' ? (
                             <>
                               {log.weight && <span className="bg-white/5 px-2 py-1 rounded-md border border-white/10">{log.weight} {log.unit || 'kg'}</span>}
                               {log.reps && <span className="bg-white/5 px-2 py-1 rounded-md border border-white/10">{log.reps} {t('reps')}</span>}

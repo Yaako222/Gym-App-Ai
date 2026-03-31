@@ -11,20 +11,35 @@ interface EditExerciseModalProps {
   plan: ExercisePlan | null;
 }
 
-const DAYS: DayOfWeek[] = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
-const CATEGORIES: MuscleCategory[] = ['Arme', 'Beine', 'Brust', 'Rücken', 'Schultern', 'Bauch', 'Ganzkörper', 'Cardio', 'Andere'];
+const DAYS: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+const CATEGORIES: MuscleCategory[] = ['arme', 'beine', 'brust', 'rücken', 'schultern', 'bauch', 'ganzkörper', 'cardio', 'andere'];
 
 export default function EditExerciseModal({ isOpen, onClose, plan }: EditExerciseModalProps) {
   const { t } = useLanguage();
   const [name, setName] = useState('');
-  const [dayOfWeek, setDayOfWeek] = useState<DayOfWeek>('Montag');
-  const [muscleGroup, setMuscleGroup] = useState<MuscleCategory>('Brust');
+  const [dayOfWeek, setDayOfWeek] = useState<DayOfWeek>('monday');
+  const [muscleGroup, setMuscleGroup] = useState<MuscleCategory>('brust');
 
   useEffect(() => {
     if (plan) {
       setName(plan.name);
-      setDayOfWeek(plan.dayOfWeek);
-      setMuscleGroup(plan.muscleGroup);
+      
+      // Normalize dayOfWeek
+      const dayMapping: Record<string, DayOfWeek> = {
+        'montag': 'monday', 'dienstag': 'tuesday', 'mittwoch': 'wednesday',
+        'donnerstag': 'thursday', 'freitag': 'friday', 'samstag': 'saturday', 'sonntag': 'sunday'
+      };
+      const normalizedDay = dayMapping[plan.dayOfWeek.toLowerCase()] || plan.dayOfWeek.toLowerCase() as DayOfWeek;
+      setDayOfWeek(normalizedDay);
+      
+      // Normalize muscleGroup
+      const muscleMapping: Record<string, MuscleCategory> = {
+        'arme': 'arme', 'beine': 'beine', 'brust': 'brust', 'rücken': 'rücken',
+        'schultern': 'schultern', 'bauch': 'bauch', 'ganzkörper': 'ganzkörper',
+        'cardio': 'cardio', 'andere': 'andere'
+      };
+      const normalizedMuscle = muscleMapping[plan.muscleGroup.toLowerCase()] || plan.muscleGroup.toLowerCase() as MuscleCategory;
+      setMuscleGroup(normalizedMuscle);
     }
   }, [plan]);
 

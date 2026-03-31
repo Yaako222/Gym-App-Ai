@@ -15,9 +15,9 @@ interface TodayProps {
 
 export default function Today({ plans, logs }: TodayProps) {
   const { t } = useLanguage();
-  const DAYS: DayOfWeek[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as any;
+  const DAYS: DayOfWeek[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
   const currentDate = getCurrentDate();
-  const todayNameKey = DAYS[currentDate.getDay()] as TranslationKey;
+  const todayNameKey = DAYS[currentDate.getDay()];
   const todayName = t(todayNameKey);
   const todayDateString = formatDate(currentDate);
   
@@ -89,7 +89,24 @@ export default function Today({ plans, logs }: TodayProps) {
     saveDailyState(isRestDay, isTodayDifferent, swappedPlans, newAdded);
   };
 
-  const baseTodaysPlans = plans.filter(p => p.dayOfWeek === todayName);
+  const baseTodaysPlans = plans.filter(p => {
+    const day = p.dayOfWeek.toLowerCase();
+    const todayKey = todayNameKey.toLowerCase();
+    
+    // Mapping old German strings to keys
+    const mapping: Record<string, string> = {
+      'montag': 'monday',
+      'dienstag': 'tuesday',
+      'mittwoch': 'wednesday',
+      'donnerstag': 'thursday',
+      'freitag': 'friday',
+      'samstag': 'saturday',
+      'sonntag': 'sunday'
+    };
+    
+    const normalizedDay = mapping[day] || day;
+    return normalizedDay === todayKey;
+  });
   const extraPlans = plans.filter(p => addedPlans.includes(p.id));
   
   // Apply swaps
@@ -131,8 +148,8 @@ export default function Today({ plans, logs }: TodayProps) {
   const [laserActive, setLaserActive] = useState<string | null>(null);
 
   const handleSaveLog = (plan: ExercisePlan) => {
-    if (plan.muscleGroup !== 'Cardio' && !weight) return;
-    if (plan.muscleGroup === 'Cardio' && !duration) return;
+    if (plan.muscleGroup !== 'cardio' && !weight) return;
+    if (plan.muscleGroup === 'cardio' && !duration) return;
 
     setLaserActive(plan.id);
 
@@ -141,10 +158,10 @@ export default function Today({ plans, logs }: TodayProps) {
         planId: plan.id,
         name: plan.name,
         muscleGroup: plan.muscleGroup,
-        weight: plan.muscleGroup !== 'Cardio' && weight ? Number(weight) : undefined,
-        unit: plan.muscleGroup !== 'Cardio' ? unit : undefined,
-        reps: plan.muscleGroup !== 'Cardio' && reps ? Number(reps) : undefined,
-        duration: plan.muscleGroup === 'Cardio' && duration ? Number(duration) : undefined,
+        weight: plan.muscleGroup !== 'cardio' && weight ? Number(weight) : undefined,
+        unit: plan.muscleGroup !== 'cardio' ? unit : undefined,
+        reps: plan.muscleGroup !== 'cardio' && reps ? Number(reps) : undefined,
+        duration: plan.muscleGroup === 'cardio' && duration ? Number(duration) : undefined,
         steps: steps ? Number(steps) : undefined,
       });
 
@@ -266,7 +283,7 @@ export default function Today({ plans, logs }: TodayProps) {
                     </div>
                     
                     <div className="space-y-4 relative z-10">
-                      {plan.muscleGroup === 'Cardio' ? (
+                      {plan.muscleGroup === 'cardio' ? (
                         <div>
                           <label className="block text-xs text-slate-400 mb-1 group-hover:text-[#1d7a82] transition-colors">{t('duration')} ({t('minutes')})</label>
                           <input type="number" value={activePlanId === plan.id ? duration : ''} onChange={e => {setActivePlanId(plan.id); setDuration(e.target.value)}} className="w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-glow-teal transition-all" placeholder={t('durationPlaceholder')} />
@@ -295,7 +312,7 @@ export default function Today({ plans, logs }: TodayProps) {
                       
                       <button 
                         onClick={() => handleSaveLog(plan)}
-                        disabled={activePlanId !== plan.id || (plan.muscleGroup !== 'Cardio' && !weight) || (plan.muscleGroup === 'Cardio' && !duration)}
+                        disabled={activePlanId !== plan.id || (plan.muscleGroup !== 'cardio' && !weight) || (plan.muscleGroup === 'cardio' && !duration)}
                         className="w-full flex items-center justify-center gap-2 bg-[#1d7a82] hover:bg-[#155e63] disabled:opacity-50 disabled:cursor-not-allowed text-white py-2 rounded-xl text-sm font-medium transition-all hover:glow-teal border border-transparent hover:border-[#1d7a82]"
                       >
                         <Check className="w-4 h-4" /> {t('save')}

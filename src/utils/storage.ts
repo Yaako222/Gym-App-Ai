@@ -291,3 +291,35 @@ export const getUserProfile = async (userId: string) => {
     return null;
   }
 };
+
+export const deleteAccount = async () => {
+  if (!auth.currentUser) throw new Error('Not authenticated');
+  const userId = auth.currentUser.uid;
+  
+  // 1. Delete user profile
+  const userRef = doc(db, 'users', userId);
+  await deleteDoc(userRef);
+  
+  // 2. Delete plans
+  const plansSnapshot = await getDocs(collection(db, `users/${userId}/plans`));
+  for (const doc of plansSnapshot.docs) {
+    await deleteDoc(doc.ref);
+  }
+  
+  // 3. Delete logs
+  const logsSnapshot = await getDocs(collection(db, `users/${userId}/logs`));
+  for (const doc of logsSnapshot.docs) {
+    await deleteDoc(doc.ref);
+  }
+  
+  // 4. Delete friendships
+  const q1 = query(collection(db, 'friendships'), where('user1', '==', userId));
+  const q2 = query(collection(db, 'friendships'), where('user2', '==', userId));
+  const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+  for (const doc of [...snap1.docs, ...snap2.docs]) {
+    await deleteDoc(doc.ref);
+  }
+  
+  // 5. Delete auth account
+  await auth.currentUser.delete();
+};

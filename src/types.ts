@@ -1,5 +1,5 @@
-export type DayOfWeek = 'Montag' | 'Dienstag' | 'Mittwoch' | 'Donnerstag' | 'Freitag' | 'Samstag' | 'Sonntag';
-export type MuscleCategory = 'Arme' | 'Beine' | 'Brust' | 'Rücken' | 'Schultern' | 'Bauch' | 'Ganzkörper' | 'Cardio' | 'Andere';
+export type DayOfWeek = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+export type MuscleCategory = 'arme' | 'beine' | 'brust' | 'rücken' | 'schultern' | 'bauch' | 'ganzkörper' | 'cardio' | 'andere';
 export type WeightUnit = 'kg' | 'lbs';
 
 export interface ExercisePlan {

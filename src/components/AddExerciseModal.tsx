@@ -11,15 +11,15 @@ interface AddExerciseModalProps {
   plans: ExercisePlan[];
 }
 
-const DAYS: DayOfWeek[] = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
-const CATEGORIES: MuscleCategory[] = ['Arme', 'Beine', 'Brust', 'Rücken', 'Schultern', 'Bauch', 'Ganzkörper', 'Cardio', 'Andere'];
+const DAYS: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+const CATEGORIES: MuscleCategory[] = ['arme', 'beine', 'brust', 'rücken', 'schultern', 'bauch', 'ganzkörper', 'cardio', 'andere'];
 
 export default function AddExerciseModal({ isOpen, onClose, plans }: AddExerciseModalProps) {
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<'saved' | 'new'>('saved');
   const [name, setName] = useState('');
-  const [dayOfWeek, setDayOfWeek] = useState<DayOfWeek>('Montag');
-  const [muscleGroup, setMuscleGroup] = useState<MuscleCategory>('Brust');
+  const [dayOfWeek, setDayOfWeek] = useState<DayOfWeek>('monday');
+  const [muscleGroup, setMuscleGroup] = useState<MuscleCategory>('brust');
 
   // Get unique exercises grouped by muscle category
   const groupedSavedExercises = useMemo(() => {
@@ -58,8 +58,8 @@ export default function AddExerciseModal({ isOpen, onClose, plans }: AddExercise
     });
 
     setName('');
-    setDayOfWeek('Montag');
-    setMuscleGroup('Brust');
+    setDayOfWeek('monday');
+    setMuscleGroup('brust');
     setActiveTab('saved');
     onClose();
   };

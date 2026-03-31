@@ -13,7 +13,7 @@ interface DashboardProps {
   searchQuery: string;
 }
 
-const DAYS: DayOfWeek[] = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+const DAYS: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
 export default function Dashboard({ plans, searchQuery }: DashboardProps) {
   const { t } = useLanguage();
@@ -23,7 +23,14 @@ export default function Dashboard({ plans, searchQuery }: DashboardProps) {
   useEffect(() => {
     const savedRestDays = localStorage.getItem('gym_weekly_restdays');
     if (savedRestDays) {
-      setWeeklyRestDays(JSON.parse(savedRestDays));
+      // Normalize saved rest days
+      const rawRestDays = JSON.parse(savedRestDays) as string[];
+      const dayMapping: Record<string, DayOfWeek> = {
+        'montag': 'monday', 'dienstag': 'tuesday', 'mittwoch': 'wednesday',
+        'donnerstag': 'thursday', 'freitag': 'friday', 'samstag': 'saturday', 'sonntag': 'sunday'
+      };
+      const normalized = rawRestDays.map(d => dayMapping[d.toLowerCase()] || d.toLowerCase() as DayOfWeek);
+      setWeeklyRestDays(normalized);
     }
   }, []);
 
@@ -45,7 +52,14 @@ export default function Dashboard({ plans, searchQuery }: DashboardProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       {DAYS.map(day => {
-        const dayPlans = filteredPlans.filter(p => p.dayOfWeek === day);
+        const dayMapping: Record<string, DayOfWeek> = {
+          'montag': 'monday', 'dienstag': 'tuesday', 'mittwoch': 'wednesday',
+          'donnerstag': 'thursday', 'freitag': 'friday', 'samstag': 'saturday', 'sonntag': 'sunday'
+        };
+        const dayPlans = filteredPlans.filter(p => {
+          const normalizedPlanDay = dayMapping[p.dayOfWeek.toLowerCase()] || p.dayOfWeek.toLowerCase();
+          return normalizedPlanDay === day;
+        });
         
         if (searchQuery && dayPlans.length === 0) return null;
 

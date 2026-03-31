@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
-import { Settings as SettingsIcon, Moon, Sun, Globe, User, LogOut, Check, X, Languages } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Settings as SettingsIcon, Moon, Sun, Globe, User, LogOut, Check, X, Languages, Trash2 } from 'lucide-react';
 import { auth } from '../firebase';
 import { logout } from '../firebase';
 import { UserProfile } from '../types';
-import { updateUserProfile, checkUsernameAvailability, getUserProfile } from '../utils/storage';
+import { updateUserProfile, checkUsernameAvailability, getUserProfile, deleteAccount } from '../utils/storage';
 import { useLanguage } from '../contexts/LanguageContext';
 
 export default function Settings() {
@@ -14,6 +14,7 @@ export default function Settings() {
   const [newUsername, setNewUsername] = useState('');
   const [usernameError, setUsernameError] = useState('');
   const [isSavingUsername, setIsSavingUsername] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<'username' | 'account' | null>(null);
   
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [timezone, setTimezone] = useState<string>(Intl.DateTimeFormat().resolvedOptions().timeZone);
@@ -85,6 +86,33 @@ export default function Settings() {
     }
   };
 
+  const handleDeleteUsername = async () => {
+    setIsSavingUsername(true);
+    try {
+      await updateUserProfile({ username: '', searchableUsername: '' });
+      setProfile(prev => prev ? { ...prev, username: '' } : null);
+      setNewUsername('');
+      setShowDeleteConfirm(null);
+    } catch (error) {
+      console.error('Error deleting username:', error);
+    } finally {
+      setIsSavingUsername(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setIsSavingUsername(true);
+    try {
+      await deleteAccount();
+      // Auth state listener will handle redirection
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      alert('Error deleting account. You might need to log in again to perform this action.');
+    } finally {
+      setIsSavingUsername(false);
+    }
+  };
+
   const handleThemeChange = async (newTheme: 'dark' | 'light') => {
     setTheme(newTheme);
     await updateUserProfile({ theme: newTheme });
@@ -150,14 +178,26 @@ export default function Settings() {
                   <p className="text-xs text-slate-500">{t('usernameTakenInfo')}</p>
                 </div>
               ) : (
-                <div className="flex items-center justify-between bg-black/20 border border-white/5 rounded-xl p-3">
-                  <span className="text-white font-medium">@{profile?.username || t('loading')}</span>
-                  <button
-                    onClick={() => setIsEditingUsername(true)}
-                    className="text-sm text-[#1d7a82] hover:text-white transition-colors"
-                  >
-                    {t('edit')}
-                  </button>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between bg-black/20 border border-white/5 rounded-xl p-3">
+                    <span className="text-white font-medium">
+                      {profile?.username ? `@${profile.username}` : t('loading')}
+                    </span>
+                    <button
+                      onClick={() => setIsEditingUsername(true)}
+                      className="text-sm text-[#1d7a82] hover:text-white transition-colors"
+                    >
+                      {t('edit')}
+                    </button>
+                  </div>
+                  {profile?.username && (
+                    <button
+                      onClick={() => setShowDeleteConfirm('username')}
+                      className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1 transition-colors self-start px-1"
+                    >
+                      <Trash2 className="w-3 h-3" /> {t('deleteUsername')}
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -231,16 +271,73 @@ export default function Settings() {
             {t('account')}
           </h3>
           
-          <button
-            onClick={logout}
-            className="w-full flex items-center justify-center gap-2 bg-[#FF0050]/10 hover:bg-[#FF0050]/20 text-[#FF0050] border border-[#FF0050]/30 py-3 rounded-xl font-medium transition-all"
-          >
-            <LogOut className="w-5 h-5" />
-            {t('logout')}
-          </button>
+          <div className="space-y-3">
+            <button
+              onClick={logout}
+              className="w-full flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white border border-white/10 py-3 rounded-xl font-medium transition-all"
+            >
+              <LogOut className="w-5 h-5" />
+              {t('logout')}
+            </button>
+            <button
+              onClick={() => setShowDeleteConfirm('account')}
+              className="w-full flex items-center justify-center gap-2 bg-[#FF0050]/10 hover:bg-[#FF0050]/20 text-[#FF0050] border border-[#FF0050]/30 py-3 rounded-xl font-medium transition-all"
+            >
+              <Trash2 className="w-5 h-5" />
+              {t('deleteAccount')}
+            </button>
+          </div>
         </section>
 
       </div>
+
+      {/* Confirmation Modals */}
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowDeleteConfirm(null)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm bg-[#1e293b] border border-red-500/30 shadow-[0_0_30px_rgba(255,0,0,0.15)] rounded-2xl z-[70] p-6"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Trash2 className="w-5 h-5 text-red-500" />
+                  {showDeleteConfirm === 'username' ? t('deleteUsername') : t('deleteAccount')}
+                </h3>
+                <button onClick={() => setShowDeleteConfirm(null)} className="text-slate-400 hover:text-white">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <p className="text-slate-400 mb-6">
+                {showDeleteConfirm === 'username' ? t('deleteUsernameConfirm') : t('deleteAccountConfirm')}
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(null)}
+                  className="flex-1 px-4 py-2.5 rounded-xl font-medium bg-white/10 text-white hover:bg-white/20 transition-all"
+                >
+                  {t('cancel')}
+                </button>
+                <button
+                  onClick={showDeleteConfirm === 'username' ? handleDeleteUsername : handleDeleteAccount}
+                  className="flex-1 px-4 py-2.5 rounded-xl font-medium bg-red-500 text-white hover:bg-red-600 transition-all glow-red"
+                >
+                  {t('delete')}
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
