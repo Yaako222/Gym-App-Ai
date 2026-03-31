@@ -15,6 +15,7 @@ export default function Settings() {
   const [usernameError, setUsernameError] = useState('');
   const [isSavingUsername, setIsSavingUsername] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<'username' | 'account' | null>(null);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [timezone, setTimezone] = useState<string>(Intl.DateTimeFormat().resolvedOptions().timeZone);
@@ -101,15 +102,20 @@ export default function Settings() {
   };
 
   const handleDeleteAccount = async () => {
-    setIsSavingUsername(true);
+    setShowDeleteConfirm(null);
+    setIsDeletingAccount(true);
+    
     try {
       await deleteAccount();
       // Auth state listener will handle redirection
-    } catch (error) {
+    } catch (error: any) {
+      setIsDeletingAccount(false);
       console.error('Error deleting account:', error);
-      alert('Error deleting account. You might need to log in again to perform this action.');
-    } finally {
-      setIsSavingUsername(false);
+      if (error.message === 'REAUTH_REQUIRED') {
+        alert(t('reauthRequired'));
+      } else {
+        alert(t('saveError'));
+      }
     }
   };
 
@@ -336,6 +342,77 @@ export default function Settings() {
               </div>
             </motion.div>
           </>
+        )}
+      </AnimatePresence>
+      {/* Deleting Overlay */}
+      <AnimatePresence>
+        {isDeletingAccount && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center overflow-hidden"
+          >
+            {/* Glitchy background elements */}
+            {[...Array(20)].map((_, i) => (
+              <motion.div
+                key={i}
+                initial={{ 
+                  x: Math.random() * window.innerWidth, 
+                  y: Math.random() * window.innerHeight,
+                  width: Math.random() * 100 + 50,
+                  height: 2,
+                  opacity: 0,
+                  backgroundColor: i % 2 === 0 ? '#1d7a82' : '#FF0050'
+                }}
+                animate={{ 
+                  opacity: [0, 0.8, 0],
+                  x: (Math.random() - 0.5) * 200 + (Math.random() * window.innerWidth),
+                  scaleX: [1, 2, 1]
+                }}
+                transition={{ 
+                  duration: 0.2, 
+                  repeat: Infinity, 
+                  delay: Math.random() * 2,
+                  ease: "linear"
+                }}
+                className="absolute"
+              />
+            ))}
+
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ 
+                scale: [0.8, 1.1, 0],
+                opacity: [0, 1, 0],
+                filter: ["blur(0px)", "blur(10px)", "blur(40px)"]
+              }}
+              transition={{ duration: 2, times: [0, 0.5, 1] }}
+              className="relative z-10 text-center"
+            >
+              <h2 className="text-4xl font-black text-white mb-2 tracking-tighter uppercase italic">
+                System <span className="text-[#FF0050]">Purge</span>
+              </h2>
+              <p className="text-[#1d7a82] font-mono text-sm tracking-widest animate-pulse">
+                DELETING_ALL_DATA...
+              </p>
+            </motion.div>
+
+            {/* Exploding particles */}
+            {[...Array(50)].map((_, i) => (
+              <motion.div
+                key={`p-${i}`}
+                initial={{ x: 0, y: 0, width: 4, height: 4, opacity: 1 }}
+                animate={{ 
+                  x: (Math.random() - 0.5) * 1000, 
+                  y: (Math.random() - 0.5) * 1000,
+                  opacity: 0,
+                  rotate: Math.random() * 360
+                }}
+                transition={{ duration: 1.5, delay: 0.5, ease: "easeOut" }}
+                className="absolute bg-white rounded-sm"
+              />
+            ))}
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
