@@ -4,18 +4,24 @@ import { ExerciseLog, ChatMessage } from '../types';
 import { Send, Bot, User, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface AIChatProps {
   logs: ExerciseLog[];
 }
 
 export default function AIChat({ logs }: AIChatProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { id: '1', role: 'model', text: 'Hallo! Ich bin dein KI-Coach. Frag mich nach deinen Trainingsdaten, z.B. "Was war mein Gewicht beim Bankdrücken?"' }
-  ]);
+  const { t, language } = useLanguage();
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMessages([
+      { id: '1', role: 'model', text: t('aiCoachWelcome') }
+    ]);
+  }, [language]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -37,9 +43,13 @@ export default function AIChat({ logs }: AIChatProps) {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       
-      const systemInstruction = `Du bist ein hilfreicher Gym-Coach. Hier sind die aktuellen Trainingsdaten des Nutzers im JSON-Format:
+      const systemInstruction = language === 'de' 
+        ? `Du bist ein hilfreicher Gym-Coach. Hier sind die aktuellen Trainingsdaten des Nutzers im JSON-Format:
 ${JSON.stringify(logs, null, 2)}
-Beantworte die Fragen des Nutzers basierend auf diesen Daten. Antworte auf Deutsch, sei motivierend und präzise. Wenn du eine Übung nicht findest, weise freundlich darauf hin.`;
+Beantworte die Fragen des Nutzers basierend auf diesen Daten. Antworte auf Deutsch, sei motivierend und präzise. Wenn du eine Übung nicht findest, weise freundlich darauf hin.`
+        : `You are a helpful gym coach. Here are the user's current training data in JSON format:
+${JSON.stringify(logs, null, 2)}
+Answer the user's questions based on this data. Answer in English, be motivating and precise. If you cannot find an exercise, point it out friendly.`;
 
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
@@ -52,14 +62,14 @@ Beantworte die Fragen des Nutzers basierend auf diesen Daten. Antworte auf Deuts
       setMessages(prev => [...prev, { 
         id: crypto.randomUUID(), 
         role: 'model', 
-        text: response.text || 'Entschuldigung, ich konnte keine Antwort generieren.' 
+        text: response.text || t('aiErrorNoResponse') 
       }]);
     } catch (error) {
       console.error('AI Error:', error);
       setMessages(prev => [...prev, { 
         id: crypto.randomUUID(), 
         role: 'model', 
-        text: 'Es gab einen Fehler bei der Verbindung zur KI. Bitte überprüfe den API-Key oder versuche es später noch einmal.' 
+        text: t('aiErrorConnection') 
       }]);
     } finally {
       setIsLoading(false);
@@ -73,7 +83,7 @@ Beantworte die Fragen des Nutzers basierend auf diesen Daten. Antworte auf Deuts
           <Bot className="w-5 h-5 text-[#1d7a82]" />
         </div>
         <div>
-          <h2 className="font-semibold text-white">AI Coach</h2>
+          <h2 className="font-semibold text-white">{t('aiCoach')}</h2>
           <p className="text-xs text-slate-400">Powered by Gemini</p>
         </div>
       </div>
@@ -111,7 +121,7 @@ Beantworte die Fragen des Nutzers basierend auf diesen Daten. Antworte auf Deuts
             </div>
             <div className="bg-black/20 border border-white/5 rounded-2xl rounded-tl-none p-3 flex items-center gap-2">
               <Loader2 className="w-4 h-4 text-[#1d7a82] animate-spin" />
-              <span className="text-sm text-slate-400">Analysiere Daten...</span>
+              <span className="text-sm text-slate-400">{t('aiAnalyzing')}</span>
             </div>
           </motion.div>
         )}
@@ -124,7 +134,7 @@ Beantworte die Fragen des Nutzers basierend auf diesen Daten. Antworte auf Deuts
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Frag mich etwas..."
+            placeholder={t('aiInputPlaceholder')}
             className="w-full bg-black/20 border border-white/10 rounded-xl pl-4 pr-12 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#1d7a82] focus:border-transparent transition-all"
           />
           <button

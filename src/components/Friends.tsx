@@ -7,8 +7,10 @@ import { UserProfile, Friendship, ExerciseLog } from '../types';
 import { searchUsersByUsername, sendFriendRequest, acceptFriendRequest, getUserProfile, removeFriend } from '../utils/storage';
 import { getCurrentDate, formatDate } from '../utils/time';
 import Analytics from './Analytics';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export const Friends: React.FC = () => {
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
   const [friendships, setFriendships] = useState<Friendship[]>([]);
@@ -115,11 +117,11 @@ export const Friends: React.FC = () => {
   return (
     <div className="space-y-8 pb-24">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-white text-glow-teal">Freunde</h1>
+        <h1 className="text-3xl font-bold text-white text-glow-teal">{t('friends')}</h1>
       </div>
 
       <div className="bg-[#1e293b] rounded-2xl p-6 border border-[#1d7a82]/30 shadow-[0_0_20px_rgba(29,122,130,0.1)]">
-        <h2 className="text-lg font-semibold text-white mb-4">Freunde finden</h2>
+        <h2 className="text-lg font-semibold text-white mb-4">{t('findFriends')}</h2>
         <div className="flex gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -128,7 +130,7 @@ export const Friends: React.FC = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              placeholder="Benutzername suchen..."
+              placeholder={t('searchUsername')}
               className="w-full bg-black/20 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder:text-slate-500 outline-none focus:border-glow-teal transition-all"
             />
           </div>
@@ -136,7 +138,7 @@ export const Friends: React.FC = () => {
             onClick={handleSearch}
             className="bg-[#1d7a82] hover:bg-[#155e63] text-white px-6 rounded-xl font-medium transition-all hover:glow-teal"
           >
-            Suchen
+            {t('search')}
           </button>
         </div>
 
@@ -162,13 +164,13 @@ export const Friends: React.FC = () => {
                       onClick={() => sendFriendRequest(user.uid)}
                       className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-sm transition-all"
                     >
-                      <UserPlus className="w-4 h-4" /> Hinzufügen
+                      <UserPlus className="w-4 h-4" /> {t('add')}
                     </button>
                   ) : existingFriendship.status === 'pending' ? (
-                    <span className="text-sm text-slate-400 bg-white/5 px-3 py-1 rounded-lg">Ausstehend</span>
+                    <span className="text-sm text-slate-400 bg-white/5 px-3 py-1 rounded-lg">{t('pending')}</span>
                   ) : (
                     <span className="text-sm text-[#1d7a82] bg-[#1d7a82]/10 px-3 py-1 rounded-lg flex items-center gap-1">
-                      <UserCheck className="w-4 h-4" /> Befreundet
+                      <UserCheck className="w-4 h-4" /> {t('friended')}
                     </span>
                   )}
                 </div>
@@ -180,7 +182,7 @@ export const Friends: React.FC = () => {
 
       {pendingRequests.length > 0 && (
         <div className="bg-[#1e293b] rounded-2xl p-6 border border-[#FF0050]/30 shadow-[0_0_20px_rgba(255,0,80,0.1)]">
-          <h2 className="text-lg font-semibold text-white mb-4 text-glow-pink">Freundschaftsanfragen</h2>
+          <h2 className="text-lg font-semibold text-white mb-4 text-glow-pink">{t('friendRequests')}</h2>
           <div className="space-y-3">
             {pendingRequests.map(req => {
               const profile = friendsProfiles[req.user1];
@@ -201,7 +203,7 @@ export const Friends: React.FC = () => {
                     onClick={() => acceptFriendRequest(req.id)}
                     className="bg-[#FF0050] hover:bg-[#cc0040] text-white px-4 py-2 rounded-lg text-sm transition-all hover:glow-pink"
                   >
-                    Annehmen
+                    {t('accept')}
                   </button>
                 </div>
               );
@@ -212,9 +214,9 @@ export const Friends: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1 bg-[#1e293b] rounded-2xl p-6 border border-white/10">
-          <h2 className="text-lg font-semibold text-white mb-4">Meine Freunde</h2>
+          <h2 className="text-lg font-semibold text-white mb-4">{t('myFriends')}</h2>
           {acceptedFriends.length === 0 ? (
-            <p className="text-slate-500 text-sm">Du hast noch keine Freunde hinzugefügt.</p>
+            <p className="text-slate-500 text-sm">{t('noFriendsAdded')}</p>
           ) : (
             <div className="space-y-2">
               {acceptedFriends.map(f => {
@@ -243,7 +245,7 @@ export const Friends: React.FC = () => {
                         setFriendToRemove({ id: f.id, isSelected });
                       }}
                       className="p-2 text-slate-400 hover:text-[#FF0050] hover:bg-white/5 rounded-lg transition-colors"
-                      title="Freund entfernen"
+                      title={t('removeFriend')}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -259,20 +261,20 @@ export const Friends: React.FC = () => {
             <div className="bg-[#1e293b] rounded-2xl p-6 border border-white/10">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                  Aktivität von <span className="text-[#1d7a82] text-glow-teal">{friendsProfiles[selectedFriend]?.username}</span>
+                  {t('activityFrom')} <span className="text-[#1d7a82] text-glow-teal">{friendsProfiles[selectedFriend]?.username}</span>
                 </h2>
                 <div className="flex bg-black/20 rounded-lg p-1 border border-white/5">
                   <button
                     onClick={() => setFriendTab('7days')}
                     className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${friendTab === '7days' ? 'bg-[#1d7a82] text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
                   >
-                    <Calendar className="w-4 h-4" /> 7 Tage
+                    <Calendar className="w-4 h-4" /> {t('sevenDays')}
                   </button>
                   <button
                     onClick={() => setFriendTab('analytics')}
                     className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${friendTab === 'analytics' ? 'bg-[#1d7a82] text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
                   >
-                    <BarChart2 className="w-4 h-4" /> Analysen
+                    <BarChart2 className="w-4 h-4" /> {t('analytics')}
                   </button>
                 </div>
               </div>
@@ -286,28 +288,28 @@ export const Friends: React.FC = () => {
                   {recentLogs.length > 0 && (
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
                       <div className="bg-black/20 p-4 rounded-xl border border-white/5">
-                        <div className="text-slate-400 text-xs mb-1">Workouts</div>
+                        <div className="text-slate-400 text-xs mb-1">{t('workouts')}</div>
                         <div className="text-2xl font-bold text-white">{recentLogs.length}</div>
                       </div>
                       <div className="bg-black/20 p-4 rounded-xl border border-white/5">
-                        <div className="text-slate-400 text-xs mb-1">Volumen (kg)</div>
+                        <div className="text-slate-400 text-xs mb-1">{t('volumeKg')}</div>
                         <div className="text-2xl font-bold text-[#1d7a82] text-glow-teal">
                           {Math.round(recentLogs.reduce((sum, log) => sum + ((log.weight || 0) * (log.reps || 1)), 0))}
                         </div>
                       </div>
                       <div className="bg-black/20 p-4 rounded-xl border border-white/5">
-                        <div className="text-slate-400 text-xs mb-1">Cardio (Min)</div>
+                        <div className="text-slate-400 text-xs mb-1">{t('cardioMin')}</div>
                         <div className="text-2xl font-bold text-[#FF0050] text-glow-pink">
                           {recentLogs.reduce((sum, log) => sum + (log.duration || 0), 0)}
                         </div>
                       </div>
                       <div className="bg-black/20 p-4 rounded-xl border border-white/5">
-                        <div className="text-slate-400 text-xs mb-1">Top Muskel</div>
+                        <div className="text-slate-400 text-xs mb-1">{t('topMuscle')}</div>
                         <div className="text-xl font-bold text-white truncate">
-                          {Object.entries(recentLogs.reduce((acc, log) => {
-                            acc[log.muscleGroup] = (acc[log.muscleGroup] || 0) + 1;
+                          {t((Object.entries(recentLogs.reduce((acc, log) => {
+                            acc[log.muscleGroup.toLowerCase()] = (acc[log.muscleGroup.toLowerCase()] || 0) + 1;
                             return acc;
-                          }, {} as Record<string, number>)).sort((a, b) => b[1] - a[1])[0]?.[0] || '-'}
+                          }, {} as Record<string, number>)).sort((a, b) => b[1] - a[1])[0]?.[0] || '-') as any)}
                         </div>
                       </div>
                     </div>
@@ -316,7 +318,7 @@ export const Friends: React.FC = () => {
                   {recentLogs.length === 0 ? (
                     <div className="text-center py-12">
                       <Activity className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-                      <p className="text-slate-400">Keine Aktivitäten in den letzten 7 Tagen.</p>
+                      <p className="text-slate-400">{t('noActivityLast7Days')}</p>
                     </div>
                   ) : (
                     <div className="space-y-6">
@@ -327,7 +329,7 @@ export const Friends: React.FC = () => {
                             <div key={muscleGroup} className="bg-black/20 rounded-xl p-4 border border-white/5">
                               <h4 className="text-white font-medium mb-3 flex items-center gap-2">
                                 <span className="w-2 h-4 bg-[#1d7a82] rounded-full glow-teal"></span>
-                                {muscleGroup}
+                                {t(muscleGroup.toLowerCase() as any)}
                               </h4>
                               <div className="space-y-2">
                                 {logs.map(log => (
@@ -338,7 +340,7 @@ export const Friends: React.FC = () => {
                                         <span className="flex items-center gap-1"><Activity className="w-4 h-4 text-[#1d7a82]" /> {log.weight} {log.unit}</span>
                                       )}
                                       {log.reps && <span className="flex items-center gap-1"><Hash className="w-4 h-4 text-[#1d7a82]" /> {log.reps} Reps</span>}
-                                      {log.duration && <span className="flex items-center gap-1"><Clock className="w-4 h-4 text-[#1d7a82]" /> {log.duration} Min</span>}
+                                      {log.duration && <span className="flex items-center gap-1"><Clock className="w-4 h-4 text-[#1d7a82]" /> {log.duration} {t('minutesShort')}</span>}
                                       {log.steps && <span className="flex items-center gap-1"><Footprints className="w-4 h-4 text-[#1d7a82]" /> {log.steps} Steps</span>}
                                     </div>
                                   </div>
@@ -356,9 +358,9 @@ export const Friends: React.FC = () => {
           ) : (
             <div className="bg-[#1e293b] rounded-2xl p-6 border border-white/10 h-full flex flex-col items-center justify-center text-center min-h-[300px]">
               <UserCheck className="w-16 h-16 text-slate-600 mb-4" />
-              <h3 className="text-xl font-medium text-white mb-2">Wähle einen Freund</h3>
+              <h3 className="text-xl font-medium text-white mb-2">{t('selectFriend')}</h3>
               <p className="text-slate-400 max-w-sm">
-                Wähle einen Freund aus der Liste auf der linken Seite, um seine Aktivitäten der letzten 7 Tage zu sehen.
+                {t('selectFriendDescription')}
               </p>
             </div>
           )}
@@ -368,14 +370,14 @@ export const Friends: React.FC = () => {
       {friendToRemove && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-[#1e293b] rounded-2xl p-6 max-w-sm w-full border border-[#FF0050]/30 shadow-[0_0_30px_rgba(255,0,80,0.15)]">
-            <h3 className="text-xl font-bold text-white mb-2">Freund entfernen</h3>
-            <p className="text-slate-400 mb-6">Möchtest du diesen Freund wirklich entfernen? Diese Aktion kann nicht rückgängig gemacht werden.</p>
+            <h3 className="text-xl font-bold text-white mb-2">{t('removeFriend')}</h3>
+            <p className="text-slate-400 mb-6">{t('removeFriendConfirm')}</p>
             <div className="flex gap-3">
               <button 
                 onClick={() => setFriendToRemove(null)}
                 className="flex-1 px-4 py-2 rounded-xl font-medium bg-white/10 text-white hover:bg-white/20 transition-colors"
               >
-                Abbrechen
+                {t('cancel')}
               </button>
               <button 
                 onClick={() => {
@@ -385,7 +387,7 @@ export const Friends: React.FC = () => {
                 }}
                 className="flex-1 px-4 py-2 rounded-xl font-medium bg-[#FF0050] text-white hover:bg-[#cc0040] transition-colors glow-pink"
               >
-                Entfernen
+                {t('remove')}
               </button>
             </div>
           </div>

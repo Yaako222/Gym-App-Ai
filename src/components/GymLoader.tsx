@@ -1,7 +1,9 @@
 import { motion } from 'motion/react';
 import { Dumbbell } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export default function GymLoader() {
+  const { t } = useLanguage();
   return (
     <motion.div 
       initial={{ opacity: 1 }}
@@ -34,7 +36,7 @@ export default function GymLoader() {
         className="mt-12 flex flex-col items-center gap-3"
       >
         <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#FF0050] to-[#1d7a82] tracking-widest uppercase">
-          Warming Up
+          {t('warmingUp')}
         </h2>
         <div className="flex gap-1.5 items-end h-6">
           <motion.div animate={{ height: ['20%', '100%', '20%'] }} transition={{ duration: 1, repeat: Infinity, delay: 0 }} className="w-1.5 bg-[#FF0050] rounded-full" />

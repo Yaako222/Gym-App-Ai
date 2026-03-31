@@ -3,12 +3,15 @@ import { ExerciseLog } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { Gift, TrendingUp, Target, Calendar, Activity } from 'lucide-react';
 import { getCurrentDate } from '../utils/time';
+import { useLanguage } from '../contexts/LanguageContext';
+import { TranslationKey } from '../utils/translations';
 
 interface GymWrappedProps {
   logs: ExerciseLog[];
 }
 
 export default function GymWrapped({ logs }: GymWrappedProps) {
+  const { t } = useLanguage();
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [displayUnit, setDisplayUnit] = useState<'kg' | 'lbs'>('kg');
@@ -36,31 +39,32 @@ export default function GymWrapped({ logs }: GymWrappedProps) {
     return acc;
   }, {} as Record<string, number>);
 
-  const topMuscleGroup = Object.entries(muscleGroups).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Keine Daten';
+  const topMuscleGroupRaw = Object.entries(muscleGroups).sort((a, b) => b[1] - a[1])[0]?.[0];
+  const topMuscleGroup = topMuscleGroupRaw ? t(topMuscleGroupRaw.toLowerCase() as TranslationKey) : t('noData');
 
   const slides = [
     {
-      title: "Dein Jahr in Zahlen",
+      title: t('wrappedSlide1Title'),
       value: `${totalVolume.toLocaleString()} ${displayUnit}`,
-      subtitle: "Gesamtvolumen bewegt. Das ist wie ein kleiner LKW!",
+      subtitle: t('wrappedSlide1Subtitle'),
       icon: <TrendingUp className="w-16 h-16 text-[#FF0050] mb-6" />
     },
     {
-      title: "Lieblings-Muskelgruppe",
+      title: t('wrappedSlide2Title'),
       value: topMuscleGroup,
-      subtitle: "Du hast dieses Jahr einen klaren Favoriten gehabt.",
+      subtitle: t('wrappedSlide2Subtitle'),
       icon: <Target className="w-16 h-16 text-[#1d7a82] mb-6" />
     },
     {
-      title: "Cardio-Maschine",
-      value: `${totalCardioMinutes} Min`,
-      subtitle: "hast du mit Cardio verbracht. Dein Herz dankt dir!",
+      title: t('wrappedSlide3Title'),
+      value: `${totalCardioMinutes} ${t('minutesShort')}`,
+      subtitle: t('wrappedSlide3Subtitle'),
       icon: <Activity className="w-16 h-16 text-[#FF0050] mb-6" />
     },
     {
-      title: "Konsistenz ist King",
-      value: `${totalWorkouts} Übungen`,
-      subtitle: "aufgezeichnet. Bleib dran im nächsten Jahr!",
+      title: t('wrappedSlide4Title'),
+      value: `${totalWorkouts} ${t('exercises')}`,
+      subtitle: t('wrappedSlide4Subtitle'),
       icon: <Calendar className="w-16 h-16 text-[#1d7a82] mb-6" />
     }
   ];
@@ -71,15 +75,15 @@ export default function GymWrapped({ logs }: GymWrappedProps) {
         <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mb-6 border border-white/10 shadow-[0_0_30px_rgba(255,255,255,0.05)]">
           <Gift className="w-10 h-10 text-slate-500 drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]" />
         </div>
-        <h2 className="text-2xl font-bold text-white mb-3 text-glow-teal">Gym Wrapped ist noch nicht bereit</h2>
+        <h2 className="text-2xl font-bold text-white mb-3 text-glow-teal">{t('wrappedNotReadyTitle')}</h2>
         <p className="text-slate-400 max-w-md mb-8">
-          Dein persönlicher Jahresrückblick wird am 25. Dezember freigeschaltet. Trainiere bis dahin fleißig weiter!
+          {t('wrappedNotReadySubtitle')}
         </p>
         <button
           onClick={() => setIsUnlocked(true)}
           className="text-sm text-[#1d7a82] hover:text-white hover:text-glow-teal underline transition-all"
         >
-          (Für Demo-Zwecke jetzt freischalten)
+          {t('wrappedUnlockDemo')}
         </button>
       </div>
     );
@@ -88,7 +92,7 @@ export default function GymWrapped({ logs }: GymWrappedProps) {
   if (logs.length === 0) {
     return (
       <div className="text-center py-20">
-        <p className="text-slate-400">Nicht genug Daten für ein Wrapped. Trage erst ein paar Leistungen ein!</p>
+        <p className="text-slate-400">{t('wrappedNoData')}</p>
       </div>
     );
   }
@@ -101,7 +105,7 @@ export default function GymWrapped({ logs }: GymWrappedProps) {
           onClick={() => setDisplayUnit(prev => prev === 'kg' ? 'lbs' : 'kg')}
           className="bg-black/40 hover:bg-black/60 text-white px-4 py-2 rounded-xl text-sm font-medium transition-all hover:shadow-[0_0_15px_rgba(255,255,255,0.1)] border border-white/10"
         >
-          In {displayUnit === 'kg' ? 'lbs' : 'kg'} anzeigen
+          {t('showIn')} {displayUnit === 'kg' ? 'lbs' : 'kg'}
         </button>
       </div>
 

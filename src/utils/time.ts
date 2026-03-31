@@ -24,9 +24,11 @@ export const getCurrentISODate = (): string => {
 export const formatDate = (date: Date | string, options?: Intl.DateTimeFormatOptions): string => {
   const d = typeof date === 'string' ? new Date(date) : date;
   const tz = localStorage.getItem('gym_timezone') || Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const lang = localStorage.getItem('gym_language') || 'de';
+  const locale = lang === 'de' ? 'de-DE' : 'en-US';
   try {
-    return d.toLocaleDateString('de-DE', { timeZone: tz, ...options });
+    return d.toLocaleDateString(locale, { timeZone: tz, ...options });
   } catch (e) {
-    return d.toLocaleDateString('de-DE', options);
+    return d.toLocaleDateString(locale, options);
   }
 };

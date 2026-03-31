@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Settings as SettingsIcon, Moon, Sun, Globe, User, LogOut, Check, X } from 'lucide-react';
+import { Settings as SettingsIcon, Moon, Sun, Globe, User, LogOut, Check, X, Languages } from 'lucide-react';
 import { auth } from '../firebase';
 import { logout } from '../firebase';
 import { UserProfile } from '../types';
 import { updateUserProfile, checkUsernameAvailability, getUserProfile } from '../utils/storage';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export default function Settings() {
+  const { t, language, setLanguage } = useLanguage();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [newUsername, setNewUsername] = useState('');
@@ -53,12 +55,12 @@ export default function Settings() {
     }
 
     if (newUsername.length < 3 || newUsername.length > 30) {
-      setUsernameError('Benutzername muss zwischen 3 und 30 Zeichen lang sein.');
+      setUsernameError(t('usernameErrorLength'));
       return;
     }
     
     if (!/^[a-zA-Z0-9_]+$/.test(newUsername)) {
-      setUsernameError('Nur Buchstaben, Zahlen und Unterstriche erlaubt.');
+      setUsernameError(t('usernameErrorChars'));
       return;
     }
 
@@ -68,7 +70,7 @@ export default function Settings() {
     try {
       const isAvailable = await checkUsernameAvailability(newUsername);
       if (!isAvailable) {
-        setUsernameError('Dieser Benutzername ist bereits vergeben.');
+        setUsernameError(t('usernameErrorTaken'));
         setIsSavingUsername(false);
         return;
       }
@@ -77,7 +79,7 @@ export default function Settings() {
       setProfile(prev => prev ? { ...prev, username: newUsername } : null);
       setIsEditingUsername(false);
     } catch (err) {
-      setUsernameError('Fehler beim Speichern.');
+      setUsernameError(t('saveError'));
     } finally {
       setIsSavingUsername(false);
     }
@@ -101,7 +103,7 @@ export default function Settings() {
         <div className="w-10 h-10 rounded-xl bg-[#1d7a82]/20 flex items-center justify-center border border-[#1d7a82]/30 glow-teal">
           <SettingsIcon className="w-5 h-5 text-[#1d7a82]" />
         </div>
-        <h2 className="text-2xl font-bold text-white text-glow-teal">Einstellungen</h2>
+        <h2 className="text-2xl font-bold text-white text-glow-teal">{t('settings')}</h2>
       </div>
 
       <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-sm space-y-8">
@@ -110,12 +112,12 @@ export default function Settings() {
         <section>
           <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2 border-b border-white/10 pb-2">
             <User className="w-5 h-5 text-[#FF0050]" />
-            Profil
+            {t('profile')}
           </h3>
           
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-400 mb-1">Benutzername</label>
+              <label className="block text-sm font-medium text-slate-400 mb-1">{t('username')}</label>
               {isEditingUsername ? (
                 <div className="space-y-2">
                   <div className="flex gap-2">
@@ -124,7 +126,7 @@ export default function Settings() {
                       value={newUsername}
                       onChange={(e) => setNewUsername(e.target.value)}
                       className="flex-1 bg-black/20 border border-white/10 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-[#1d7a82] transition-all"
-                      placeholder="Neuer Benutzername"
+                      placeholder={t('username')}
                     />
                     <button
                       onClick={handleSaveUsername}
@@ -145,16 +147,16 @@ export default function Settings() {
                     </button>
                   </div>
                   {usernameError && <p className="text-[#FF0050] text-sm">{usernameError}</p>}
-                  <p className="text-xs text-slate-500">Einmal vergebene Namen können von anderen nicht verwendet werden, solange du ihn hast.</p>
+                  <p className="text-xs text-slate-500">{t('usernameTakenInfo')}</p>
                 </div>
               ) : (
                 <div className="flex items-center justify-between bg-black/20 border border-white/5 rounded-xl p-3">
-                  <span className="text-white font-medium">@{profile?.username || 'Laden...'}</span>
+                  <span className="text-white font-medium">@{profile?.username || t('loading')}</span>
                   <button
                     onClick={() => setIsEditingUsername(true)}
                     className="text-sm text-[#1d7a82] hover:text-white transition-colors"
                   >
-                    Bearbeiten
+                    {t('edit')}
                   </button>
                 </div>
               )}
@@ -166,30 +168,48 @@ export default function Settings() {
         <section>
           <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2 border-b border-white/10 pb-2">
             <Globe className="w-5 h-5 text-[#1d7a82]" />
-            Präferenzen
+            {t('preferences')}
           </h3>
           
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-slate-400 mb-2">Erscheinungsbild</label>
+              <label className="block text-sm font-medium text-slate-400 mb-2">{t('language')}</label>
               <div className="flex gap-2">
                 <button
-                  onClick={() => handleThemeChange('dark')}
-                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border transition-all ${theme === 'dark' ? 'bg-[#1d7a82]/20 border-[#1d7a82] text-white glow-teal' : 'bg-black/20 border-white/5 text-slate-400 hover:bg-white/5'}`}
+                  onClick={() => setLanguage('de')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border transition-all ${language === 'de' ? 'bg-[#1d7a82]/20 border-[#1d7a82] text-white glow-teal' : 'bg-black/20 border-white/5 text-slate-400 hover:bg-white/5'}`}
                 >
-                  <Moon className="w-4 h-4" /> Dunkel
+                  <Languages className="w-4 h-4" /> Deutsch
                 </button>
                 <button
-                  onClick={() => handleThemeChange('light')}
-                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border transition-all ${theme === 'light' ? 'bg-white text-slate-900 border-white shadow-[0_0_15px_rgba(255,255,255,0.5)]' : 'bg-black/20 border-white/5 text-slate-400 hover:bg-white/5'}`}
+                  onClick={() => setLanguage('en')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border transition-all ${language === 'en' ? 'bg-[#1d7a82]/20 border-[#1d7a82] text-white glow-teal' : 'bg-black/20 border-white/5 text-slate-400 hover:bg-white/5'}`}
                 >
-                  <Sun className="w-4 h-4" /> Hell
+                  <Languages className="w-4 h-4" /> English
                 </button>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-400 mb-1">Zeitzone</label>
+              <label className="block text-sm font-medium text-slate-400 mb-2">{t('theme')}</label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleThemeChange('dark')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border transition-all ${theme === 'dark' ? 'bg-[#1d7a82]/20 border-[#1d7a82] text-white glow-teal' : 'bg-black/20 border-white/5 text-slate-400 hover:bg-white/5'}`}
+                >
+                  <Moon className="w-4 h-4" /> {t('dark')}
+                </button>
+                <button
+                  onClick={() => handleThemeChange('light')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border transition-all ${theme === 'light' ? 'bg-white text-slate-900 border-white shadow-[0_0_15px_rgba(255,255,255,0.5)]' : 'bg-black/20 border-white/5 text-slate-400 hover:bg-white/5'}`}
+                >
+                  <Sun className="w-4 h-4" /> {t('light')}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-400 mb-1">{t('timezone')}</label>
               <select
                 value={timezone}
                 onChange={handleTimezoneChange}
@@ -199,7 +219,7 @@ export default function Settings() {
                   <option key={tz} value={tz} className="bg-[#1e293b]">{tz}</option>
                 ))}
               </select>
-              <p className="text-xs text-slate-500 mt-2">Wird für die korrekte Zuordnung deiner Workouts zum aktuellen Tag verwendet.</p>
+              <p className="text-xs text-slate-500 mt-2">{t('timezoneInfo')}</p>
             </div>
           </div>
         </section>
@@ -208,7 +228,7 @@ export default function Settings() {
         <section>
           <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2 border-b border-white/10 pb-2">
             <LogOut className="w-5 h-5 text-slate-400" />
-            Konto
+            {t('account')}
           </h3>
           
           <button
@@ -216,7 +236,7 @@ export default function Settings() {
             className="w-full flex items-center justify-center gap-2 bg-[#FF0050]/10 hover:bg-[#FF0050]/20 text-[#FF0050] border border-[#FF0050]/30 py-3 rounded-xl font-medium transition-all"
           >
             <LogOut className="w-5 h-5" />
-            Abmelden
+            {t('logout')}
           </button>
         </section>
 

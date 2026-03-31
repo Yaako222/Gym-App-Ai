@@ -37,6 +37,7 @@ export interface UserProfile {
   photoURL?: string;
   theme?: 'dark' | 'light';
   timezone?: string;
+  language?: 'de' | 'en';
 }
 
 export interface Friendship {

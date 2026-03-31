@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, Plus, Dumbbell, Bookmark } from 'lucide-react';
 import { DayOfWeek, MuscleCategory, ExercisePlan } from '../types';
 import { addPlan } from '../utils/storage';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface AddExerciseModalProps {
   isOpen: boolean;
@@ -14,6 +15,7 @@ const DAYS: DayOfWeek[] = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Frei
 const CATEGORIES: MuscleCategory[] = ['Arme', 'Beine', 'Brust', 'Rücken', 'Schultern', 'Bauch', 'Ganzkörper', 'Cardio', 'Andere'];
 
 export default function AddExerciseModal({ isOpen, onClose, plans }: AddExerciseModalProps) {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<'saved' | 'new'>('saved');
   const [name, setName] = useState('');
   const [dayOfWeek, setDayOfWeek] = useState<DayOfWeek>('Montag');
@@ -80,7 +82,7 @@ export default function AddExerciseModal({ isOpen, onClose, plans }: AddExercise
             className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-[#1e293b] border border-[#1d7a82]/50 shadow-[0_0_30px_rgba(29,122,130,0.2)] rounded-2xl z-50 overflow-hidden flex flex-col max-h-[85vh]"
           >
             <div className="flex justify-between items-center p-5 border-b border-white/10 shrink-0">
-              <h2 className="text-xl font-semibold text-white text-glow-teal">Übung hinzufügen</h2>
+              <h2 className="text-xl font-semibold text-white text-glow-teal">{t('addExercise')}</h2>
               <button onClick={onClose} className="text-slate-400 hover:text-white hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.8)] transition-all">
                 <X className="w-5 h-5" />
               </button>
@@ -92,14 +94,14 @@ export default function AddExerciseModal({ isOpen, onClose, plans }: AddExercise
                 className={`flex-1 py-3 text-sm font-medium transition-all flex items-center justify-center gap-2 ${activeTab === 'saved' ? 'text-[#1d7a82] border-b-2 border-[#1d7a82] bg-[#1d7a82]/10' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}
               >
                 <Bookmark className="w-4 h-4" />
-                Gespeichert
+                {t('saved')}
               </button>
               <button 
                 onClick={() => setActiveTab('new')} 
                 className={`flex-1 py-3 text-sm font-medium transition-all flex items-center justify-center gap-2 ${activeTab === 'new' ? 'text-[#1d7a82] border-b-2 border-[#1d7a82] bg-[#1d7a82]/10' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}
               >
                 <Dumbbell className="w-4 h-4" />
-                Neu erstellen
+                {t('createNew')}
               </button>
             </div>
             
@@ -108,12 +110,12 @@ export default function AddExerciseModal({ isOpen, onClose, plans }: AddExercise
                 <div className="space-y-6">
                   {Object.keys(groupedSavedExercises).length === 0 ? (
                     <div className="text-center py-8">
-                      <p className="text-slate-400 mb-4">Du hast noch keine Übungen gespeichert.</p>
+                      <p className="text-slate-400 mb-4">{t('noExercisesSaved')}</p>
                       <button 
                         onClick={() => setActiveTab('new')}
                         className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-xl text-sm transition-all"
                       >
-                        Erste Übung erstellen
+                        {t('createFirstExercise')}
                       </button>
                     </div>
                   ) : (
@@ -121,7 +123,7 @@ export default function AddExerciseModal({ isOpen, onClose, plans }: AddExercise
                       <div key={muscleGroup} className="space-y-3">
                         <h3 className="text-sm font-semibold text-white flex items-center gap-2 border-b border-white/10 pb-1">
                           <span className="w-2 h-4 bg-[#FF0050] rounded-full glow-pink"></span>
-                          {muscleGroup}
+                          {t(muscleGroup.toLowerCase() as any)}
                         </h3>
                         <div className="grid grid-cols-1 gap-2">
                           {exercises.map((ex, idx) => (
@@ -142,39 +144,39 @@ export default function AddExerciseModal({ isOpen, onClose, plans }: AddExercise
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1">Übungsname</label>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">{t('exerciseName')}</label>
                     <input
                       type="text"
                       required
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="z.B. Bankdrücken"
+                      placeholder={t('exercisePlaceholder')}
                       className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-glow-teal transition-all"
                     />
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-1">Muskelgruppe</label>
+                      <label className="block text-sm font-medium text-slate-300 mb-1">{t('muscleGroup')}</label>
                       <select
                         value={muscleGroup}
                         onChange={(e) => setMuscleGroup(e.target.value as MuscleCategory)}
                         className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-glow-teal transition-all appearance-none"
                       >
                         {CATEGORIES.map(cat => (
-                          <option key={cat} value={cat} className="bg-[#1e293b]">{cat}</option>
+                          <option key={cat} value={cat} className="bg-[#1e293b]">{t(cat.toLowerCase() as any)}</option>
                         ))}
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-1">Wochentag</label>
+                      <label className="block text-sm font-medium text-slate-300 mb-1">{t('dayOfWeek')}</label>
                       <select
                         value={dayOfWeek}
                         onChange={(e) => setDayOfWeek(e.target.value as DayOfWeek)}
                         className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-glow-teal transition-all appearance-none"
                       >
                         {DAYS.map(day => (
-                          <option key={day} value={day} className="bg-[#1e293b]">{day}</option>
+                          <option key={day} value={day} className="bg-[#1e293b]">{t(day.toLowerCase() as any)}</option>
                         ))}
                       </select>
                     </div>
@@ -185,7 +187,7 @@ export default function AddExerciseModal({ isOpen, onClose, plans }: AddExercise
                       type="submit"
                       className="w-full bg-[#FF0050] hover:bg-[#e60048] text-white py-3 rounded-xl font-medium transition-all glow-pink active:scale-95 border border-[#FF0050]"
                     >
-                      Zum Plan hinzufügen
+                      {t('addToPlan')}
                     </button>
                   </div>
                 </form>

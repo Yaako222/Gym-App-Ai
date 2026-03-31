@@ -5,16 +5,20 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Check, Activity, Hash, Footprints, Trash2, Coffee, RefreshCw, X, Plus } from 'lucide-react';
 import { getCurrentDate, formatDate } from '../utils/time';
 
+import { useLanguage } from '../contexts/LanguageContext';
+import { TranslationKey } from '../utils/translations';
+
 interface TodayProps {
   plans: ExercisePlan[];
   logs: ExerciseLog[];
 }
 
-const DAYS: DayOfWeek[] = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
-
 export default function Today({ plans, logs }: TodayProps) {
+  const { t } = useLanguage();
+  const DAYS: DayOfWeek[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as any;
   const currentDate = getCurrentDate();
-  const todayName = DAYS[currentDate.getDay()];
+  const todayNameKey = DAYS[currentDate.getDay()] as TranslationKey;
+  const todayName = t(todayNameKey);
   const todayDateString = formatDate(currentDate);
   
   // Local state for daily overrides
@@ -157,8 +161,8 @@ export default function Today({ plans, logs }: TodayProps) {
     <div className="space-y-8 relative">
       <div className="flex justify-between items-start sm:items-center flex-col sm:flex-row gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-white mb-2 text-glow-teal">Heute ist {todayName}</h2>
-          <p className="text-slate-400">Dein Trainingsplan für heute. Trage deine Leistungen ein!</p>
+          <h2 className="text-2xl font-bold text-white mb-2 text-glow-teal">{t('todayIs')} {todayName}</h2>
+          <p className="text-slate-400">{t('todaySubtitle')}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
@@ -166,14 +170,14 @@ export default function Today({ plans, logs }: TodayProps) {
             className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all ${isTodayDifferent ? 'bg-[#FF0050] text-white glow-pink border border-[#FF0050]' : 'bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10'}`}
           >
             <RefreshCw className="w-4 h-4" />
-            {isTodayDifferent ? 'Heute anders aktiv' : 'Heute anders trainieren'}
+            {isTodayDifferent ? t('trainDifferentActive') : t('trainDifferent')}
           </button>
           <button
             onClick={toggleRestDay}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all ${isRestDay ? 'bg-[#1d7a82] text-white glow-teal border border-[#1d7a82]' : 'bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10'}`}
           >
             <Coffee className="w-4 h-4" />
-            {isRestDay ? 'Restday aktiv' : 'Als Restday markieren'}
+            {isRestDay ? t('restDayActive') : t('markRestDay')}
           </button>
         </div>
       </div>
@@ -185,8 +189,8 @@ export default function Today({ plans, logs }: TodayProps) {
               <Coffee className="w-12 h-12 text-[#1d7a82]" />
             </div>
           </div>
-          <h3 className="text-2xl font-bold text-white mb-3">Erholung ist wichtig!</h3>
-          <p className="text-slate-400 max-w-md mx-auto">Du hast diesen Tag als Restday markiert. Gönn deinen Muskeln eine Pause, damit sie wachsen können.</p>
+          <h3 className="text-2xl font-bold text-white mb-3">{t('restDayTitle')}</h3>
+          <p className="text-slate-400 max-w-md mx-auto">{t('restDaySubtitle')}</p>
         </div>
       ) : (
         <>
@@ -197,7 +201,7 @@ export default function Today({ plans, logs }: TodayProps) {
                 className="flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all bg-[#1d7a82] text-white glow-teal hover:bg-[#155e63]"
               >
                 <Plus className="w-5 h-5" />
-                Übung für heute hinzufügen
+                {t('addExerciseToday')}
               </button>
             </div>
           )}
@@ -205,8 +209,8 @@ export default function Today({ plans, logs }: TodayProps) {
           {todaysPlans.length === 0 ? (
             <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-center text-slate-400">
               {isTodayDifferent 
-                ? "Du hast noch keine Übungen für heute ausgewählt. Klicke auf den Button oben, um Übungen hinzuzufügen!"
-                : "Du hast für heute keine Übungen im Plan. Genieße deinen Restday oder füge im Dashboard Übungen hinzu!"}
+                ? t('noExercisesTodayDifferent')
+                : t('noExercisesToday')}
             </div>
           ) : (
             <div className="space-y-8">
@@ -236,15 +240,15 @@ export default function Today({ plans, logs }: TodayProps) {
                     <div className="flex justify-between items-start mb-4 relative z-10">
                       <h3 className="text-lg font-semibold text-white">
                         {plan.name}
-                        {plan.originalId && <span className="text-xs text-[#1d7a82] ml-2 font-normal">(Ausgetauscht)</span>}
-                        {plan.isExtra && <span className="text-xs text-[#FF0050] ml-2 font-normal">(Zusätzlich)</span>}
+                        {plan.originalId && <span className="text-xs text-[#1d7a82] ml-2 font-normal">({t('swapped')})</span>}
+                        {plan.isExtra && <span className="text-xs text-[#FF0050] ml-2 font-normal">({t('extra')})</span>}
                       </h3>
                       <div className="flex gap-1">
                         {!plan.isExtra && (
                           <button 
                             onClick={() => setIsSwapModalOpen(plan.originalId || plan.id)}
                             className="text-slate-400 hover:text-[#FF0050] p-1 rounded-lg hover:bg-white/5 transition-colors"
-                            title="Übung für heute austauschen"
+                            title={t('swapExercise')}
                           >
                             <RefreshCw className="w-4 h-4" />
                           </button>
@@ -253,7 +257,7 @@ export default function Today({ plans, logs }: TodayProps) {
                           <button 
                             onClick={() => handleRemoveAddedPlan(plan.id)}
                             className="text-slate-400 hover:text-red-400 p-1 rounded-lg hover:bg-white/5 transition-colors"
-                            title="Zusätzliche Übung entfernen"
+                            title={t('removeExtra')}
                           >
                             <X className="w-4 h-4" />
                           </button>
@@ -264,13 +268,13 @@ export default function Today({ plans, logs }: TodayProps) {
                     <div className="space-y-4 relative z-10">
                       {plan.muscleGroup === 'Cardio' ? (
                         <div>
-                          <label className="block text-xs text-slate-400 mb-1 group-hover:text-[#1d7a82] transition-colors">Dauer (Minuten)</label>
-                          <input type="number" value={activePlanId === plan.id ? duration : ''} onChange={e => {setActivePlanId(plan.id); setDuration(e.target.value)}} className="w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-glow-teal transition-all" placeholder="z.B. 30" />
+                          <label className="block text-xs text-slate-400 mb-1 group-hover:text-[#1d7a82] transition-colors">{t('duration')} ({t('minutes')})</label>
+                          <input type="number" value={activePlanId === plan.id ? duration : ''} onChange={e => {setActivePlanId(plan.id); setDuration(e.target.value)}} className="w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-glow-teal transition-all" placeholder={t('durationPlaceholder')} />
                         </div>
                       ) : (
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <label className="block text-xs text-slate-400 mb-1 group-hover:text-[#1d7a82] transition-colors">Gewicht</label>
+                            <label className="block text-xs text-slate-400 mb-1 group-hover:text-[#1d7a82] transition-colors">{t('weight')}</label>
                             <div className="flex bg-black/20 border border-white/10 rounded-xl overflow-hidden focus-within:border-glow-teal transition-all">
                               <input type="number" value={activePlanId === plan.id ? weight : ''} onChange={e => {setActivePlanId(plan.id); setWeight(e.target.value)}} className="w-full bg-transparent px-3 py-2 text-white text-sm outline-none" placeholder="0" />
                               <button onClick={() => {setActivePlanId(plan.id); setUnit(unit === 'kg' ? 'lbs' : 'kg')}} className="px-3 bg-white/5 text-xs text-slate-300 hover:text-white transition-colors border-l border-white/10 hover:bg-[#1d7a82]/20">
@@ -279,13 +283,13 @@ export default function Today({ plans, logs }: TodayProps) {
                             </div>
                           </div>
                           <div>
-                            <label className="block text-xs text-slate-400 mb-1 group-hover:text-[#1d7a82] transition-colors">Reps</label>
+                            <label className="block text-xs text-slate-400 mb-1 group-hover:text-[#1d7a82] transition-colors">{t('reps')}</label>
                             <input type="number" value={activePlanId === plan.id ? reps : ''} onChange={e => {setActivePlanId(plan.id); setReps(e.target.value)}} className="w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-glow-teal transition-all" placeholder="0" />
                           </div>
                         </div>
                       )}
                       <div>
-                        <label className="block text-xs text-slate-400 mb-1 group-hover:text-[#1d7a82] transition-colors">Steps (Optional)</label>
+                        <label className="block text-xs text-slate-400 mb-1 group-hover:text-[#1d7a82] transition-colors">{t('steps')} ({t('optional')})</label>
                         <input type="number" value={activePlanId === plan.id ? steps : ''} onChange={e => {setActivePlanId(plan.id); setSteps(e.target.value)}} className="w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-glow-teal transition-all" placeholder="0" />
                       </div>
                       
@@ -294,7 +298,7 @@ export default function Today({ plans, logs }: TodayProps) {
                         disabled={activePlanId !== plan.id || (plan.muscleGroup !== 'Cardio' && !weight) || (plan.muscleGroup === 'Cardio' && !duration)}
                         className="w-full flex items-center justify-center gap-2 bg-[#1d7a82] hover:bg-[#155e63] disabled:opacity-50 disabled:cursor-not-allowed text-white py-2 rounded-xl text-sm font-medium transition-all hover:glow-teal border border-transparent hover:border-[#1d7a82]"
                       >
-                        <Check className="w-4 h-4" /> Speichern
+                        <Check className="w-4 h-4" /> {t('save')}
                       </button>
                     </div>
                   </div>
@@ -309,7 +313,7 @@ export default function Today({ plans, logs }: TodayProps) {
 
       {todaysLogs.length > 0 && (
         <div className="mt-8">
-          <h3 className="text-lg font-semibold text-white mb-4 text-glow-pink">Heute absolviert</h3>
+          <h3 className="text-lg font-semibold text-white mb-4 text-glow-pink">{t('completedToday')}</h3>
           <div className="space-y-3">
             {todaysLogs.map(log => (
               <div key={log.id} className="flex items-center justify-between bg-black/20 border border-white/5 hover:border-[#FF0050]/50 hover:shadow-[0_0_15px_rgba(255,0,80,0.15)] rounded-xl p-4 transition-all">
@@ -319,9 +323,9 @@ export default function Today({ plans, logs }: TodayProps) {
                     {log.weight !== undefined && (
                       <span className="flex items-center gap-1"><Activity className="w-3 h-3 text-[#1d7a82]" /> {log.weight} {log.unit}</span>
                     )}
-                    {log.reps && <span className="flex items-center gap-1"><Hash className="w-3 h-3 text-[#1d7a82]" /> {log.reps} Reps</span>}
-                    {log.duration && <span className="flex items-center gap-1"><Activity className="w-3 h-3 text-[#1d7a82]" /> {log.duration} Min</span>}
-                    {log.steps && <span className="flex items-center gap-1"><Footprints className="w-3 h-3 text-[#1d7a82]" /> {log.steps} Steps</span>}
+                    {log.reps && <span className="flex items-center gap-1"><Hash className="w-3 h-3 text-[#1d7a82]" /> {log.reps} {t('reps')}</span>}
+                    {log.duration && <span className="flex items-center gap-1"><Activity className="w-3 h-3 text-[#1d7a82]" /> {log.duration} {t('minutes')}</span>}
+                    {log.steps && <span className="flex items-center gap-1"><Footprints className="w-3 h-3 text-[#1d7a82]" /> {log.steps} {t('steps')}</span>}
                   </div>
                 </div>
                 <button onClick={() => deleteLog(log.id)} className="text-slate-500 hover:text-red-400 p-2">
@@ -351,21 +355,21 @@ export default function Today({ plans, logs }: TodayProps) {
               className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-[#1e293b] border border-[#1d7a82]/50 shadow-[0_0_30px_rgba(29,122,130,0.2)] rounded-2xl z-50 overflow-hidden flex flex-col max-h-[80vh]"
             >
               <div className="flex justify-between items-center p-5 border-b border-white/10 shrink-0">
-                <h2 className="text-xl font-semibold text-white text-glow-teal">Übung austauschen</h2>
+                <h2 className="text-xl font-semibold text-white text-glow-teal">{t('swapExercise')}</h2>
                 <button onClick={() => setIsSwapModalOpen(null)} className="text-slate-400 hover:text-white transition-all">
                   <X className="w-5 h-5" />
                 </button>
               </div>
               
               <div className="p-5 overflow-y-auto flex-1 space-y-2">
-                <p className="text-sm text-slate-400 mb-4">Wähle eine andere Übung aus deinem Plan, die du heute stattdessen machen möchtest.</p>
+                <p className="text-sm text-slate-400 mb-4">{t('chooseOtherExercise')}</p>
                 
                 {swappedPlans[isSwapModalOpen] && (
                   <button
                     onClick={() => handleResetSwap(isSwapModalOpen)}
                     className="w-full text-left p-3 rounded-xl bg-[#FF0050]/10 border border-[#FF0050]/30 text-[#FF0050] hover:bg-[#FF0050]/20 transition-all mb-4"
                   >
-                    Austausch rückgängig machen (Original wiederherstellen)
+                    {t('undoSwap')}
                   </button>
                 )}
 
@@ -377,13 +381,13 @@ export default function Today({ plans, logs }: TodayProps) {
                   >
                     <div>
                       <div className="text-white font-medium">{plan.name}</div>
-                      <div className="text-xs text-slate-400">{plan.muscleGroup} • {plan.dayOfWeek}</div>
+                      <div className="text-xs text-slate-400">{t(plan.muscleGroup.toLowerCase() as any)} • {t(plan.dayOfWeek.toLowerCase() as any)}</div>
                     </div>
                     <RefreshCw className="w-4 h-4 text-slate-500 group-hover:text-[#1d7a82]" />
                   </button>
                 ))}
                 {plans.length <= 1 && (
-                  <div className="text-center text-slate-500 py-4">Keine anderen Übungen verfügbar.</div>
+                  <div className="text-center text-slate-500 py-4">{t('noOtherExercises')}</div>
                 )}
               </div>
             </motion.div>
@@ -409,20 +413,20 @@ export default function Today({ plans, logs }: TodayProps) {
               className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl bg-[#1e293b] border border-[#1d7a82]/50 shadow-[0_0_30px_rgba(29,122,130,0.2)] rounded-2xl z-50 overflow-hidden flex flex-col max-h-[80vh]"
             >
               <div className="flex justify-between items-center p-5 border-b border-white/10 shrink-0">
-                <h2 className="text-xl font-semibold text-white text-glow-teal">Heute trainiere ich anders</h2>
+                <h2 className="text-xl font-semibold text-white text-glow-teal">{t('trainDifferentTitle')}</h2>
                 <button onClick={() => setIsAddFromPlanModalOpen(false)} className="text-slate-400 hover:text-white transition-all">
                   <X className="w-5 h-5" />
                 </button>
               </div>
               
               <div className="p-5 overflow-y-auto flex-1 space-y-6">
-                <p className="text-sm text-slate-400">Wähle Übungen aus deinem gesamten Wochenplan aus, die du heute zusätzlich machen möchtest.</p>
+                <p className="text-sm text-slate-400">{t('trainDifferentSubtitle')}</p>
                 
                 {Object.entries(allPlansGrouped).map(([muscleGroup, groupPlans]) => (
                   <div key={muscleGroup} className="space-y-3">
                     <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                       <span className="w-2 h-5 bg-[#FF0050] rounded-full glow-pink"></span>
-                      {muscleGroup}
+                      {t(muscleGroup.toLowerCase() as any)}
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {groupPlans.map(plan => {
@@ -436,7 +440,7 @@ export default function Today({ plans, logs }: TodayProps) {
                           >
                             <div>
                               <div className="text-white font-medium">{plan.name}</div>
-                              <div className="text-xs text-slate-400">{plan.dayOfWeek}</div>
+                              <div className="text-xs text-slate-400">{t(plan.dayOfWeek.toLowerCase() as any)}</div>
                             </div>
                             {!isAlreadyInToday && <Plus className="w-4 h-4 text-slate-500 group-hover:text-[#1d7a82]" />}
                             {isAlreadyInToday && <Check className="w-4 h-4 text-[#1d7a82]" />}
@@ -447,7 +451,7 @@ export default function Today({ plans, logs }: TodayProps) {
                   </div>
                 ))}
                 {plans.length === 0 && (
-                  <div className="text-center text-slate-500 py-4">Du hast noch keine Übungen in deinem Plan.</div>
+                  <div className="text-center text-slate-500 py-4">{t('noExercisesInPlan')}</div>
                 )}
               </div>
             </motion.div>

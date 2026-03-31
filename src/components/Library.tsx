@@ -4,12 +4,15 @@ import { ExercisePlan, MuscleCategory } from '../types';
 import { deletePlan } from '../utils/storage';
 import { Trash2, Edit2, Database, Search } from 'lucide-react';
 import EditExerciseModal from './EditExerciseModal';
+import { useLanguage } from '../contexts/LanguageContext';
+import { TranslationKey } from '../utils/translations';
 
 interface LibraryProps {
   plans: ExercisePlan[];
 }
 
 export default function Library({ plans }: LibraryProps) {
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const [editingPlan, setEditingPlan] = useState<ExercisePlan | null>(null);
   const [planToDelete, setPlanToDelete] = useState<string | null>(null);
@@ -41,14 +44,14 @@ export default function Library({ plans }: LibraryProps) {
           <div className="w-10 h-10 rounded-xl bg-[#1d7a82]/20 flex items-center justify-center border border-[#1d7a82]/30 glow-teal">
             <Database className="w-5 h-5 text-[#1d7a82]" />
           </div>
-          <h2 className="text-2xl font-bold text-white text-glow-teal">Übungsspeicher</h2>
+          <h2 className="text-2xl font-bold text-white text-glow-teal">{t('libraryTitle')}</h2>
         </div>
         
         <div className="relative w-full sm:w-64">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Übung suchen..."
+            placeholder={t('searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-2 text-white placeholder:text-slate-500 focus:outline-none focus:border-[#1d7a82]/50 focus:shadow-[0_0_15px_rgba(29,122,130,0.2)] transition-all"
@@ -59,7 +62,7 @@ export default function Library({ plans }: LibraryProps) {
       {Object.keys(groupedPlans).length === 0 ? (
         <div className="bg-white/5 border border-white/10 rounded-2xl p-8 text-center backdrop-blur-sm">
           <Database className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-          <p className="text-slate-400">Keine Übungen gefunden.</p>
+          <p className="text-slate-400">{t('noExercisesFound')}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -67,7 +70,7 @@ export default function Library({ plans }: LibraryProps) {
             <div key={category} className="bg-white/5 border border-white/10 rounded-2xl p-5 backdrop-blur-sm">
               <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-[#1d7a82] shadow-[0_0_8px_rgba(29,122,130,0.8)]"></div>
-                {category}
+                {t(category.toLowerCase() as TranslationKey)}
               </h3>
               
               <div className="space-y-3">
@@ -81,20 +84,20 @@ export default function Library({ plans }: LibraryProps) {
                   >
                     <div>
                       <h4 className="font-medium text-slate-200 group-hover:text-white">{plan.name}</h4>
-                      <p className="text-xs text-slate-500">{plan.dayOfWeek}</p>
+                      <p className="text-xs text-slate-500">{t(plan.dayOfWeek.toLowerCase() as TranslationKey)}</p>
                     </div>
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
                       <button 
                         onClick={() => setEditingPlan(plan)} 
                         className="text-slate-500 hover:text-[#1d7a82] p-2 rounded-lg hover:bg-white/5"
-                        title="Bearbeiten"
+                        title={t('edit')}
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button 
                         onClick={() => setPlanToDelete(plan.id)} 
                         className="text-slate-500 hover:text-[#FF0050] p-2 rounded-lg hover:bg-white/5"
-                        title="Löschen"
+                        title={t('delete')}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -116,20 +119,20 @@ export default function Library({ plans }: LibraryProps) {
       {planToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-[#1e293b] rounded-2xl p-6 max-w-sm w-full border border-[#FF0050]/30 shadow-[0_0_30px_rgba(255,0,80,0.15)]">
-            <h3 className="text-xl font-bold text-white mb-2">Übung löschen</h3>
-            <p className="text-slate-400 mb-6">Möchtest du diese Übung wirklich aus deinem Speicher löschen? Diese Aktion kann nicht rückgängig gemacht werden.</p>
+            <h3 className="text-xl font-bold text-white mb-2">{t('deleteExerciseTitle')}</h3>
+            <p className="text-slate-400 mb-6">{t('deleteExerciseConfirm')}</p>
             <div className="flex gap-3">
               <button 
                 onClick={() => setPlanToDelete(null)}
                 className="flex-1 px-4 py-2 rounded-xl font-medium bg-white/10 text-white hover:bg-white/20 transition-colors"
               >
-                Abbrechen
+                {t('cancel')}
               </button>
               <button 
                 onClick={confirmDelete}
                 className="flex-1 px-4 py-2 rounded-xl font-medium bg-[#FF0050] text-white hover:bg-[#cc0040] transition-colors glow-pink"
               >
-                Löschen
+                {t('delete')}
               </button>
             </div>
           </div>

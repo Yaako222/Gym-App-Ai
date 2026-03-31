@@ -3,12 +3,14 @@ import { motion } from 'motion/react';
 import { User, Check } from 'lucide-react';
 import { updateUserProfile, checkUsernameAvailability } from '../utils/storage';
 import { auth } from '../firebase';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface UsernameModalProps {
   onComplete: () => void;
 }
 
 export const UsernameModal: React.FC<UsernameModalProps> = ({ onComplete }) => {
+  const { t } = useLanguage();
   const [username, setUsername] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -16,13 +18,13 @@ export const UsernameModal: React.FC<UsernameModalProps> = ({ onComplete }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (username.length < 3 || username.length > 30) {
-      setError('Benutzername muss zwischen 3 und 30 Zeichen lang sein.');
+      setError(t('usernameErrorLength'));
       return;
     }
     
     // Basic validation for alphanumeric
     if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-      setError('Nur Buchstaben, Zahlen und Unterstriche erlaubt.');
+      setError(t('usernameErrorChars'));
       return;
     }
 
@@ -32,7 +34,7 @@ export const UsernameModal: React.FC<UsernameModalProps> = ({ onComplete }) => {
     try {
       const isAvailable = await checkUsernameAvailability(username);
       if (!isAvailable) {
-        setError('Dieser Benutzername ist bereits vergeben.');
+        setError(t('usernameErrorTaken'));
         setIsSubmitting(false);
         return;
       }
@@ -44,7 +46,7 @@ export const UsernameModal: React.FC<UsernameModalProps> = ({ onComplete }) => {
       });
       onComplete();
     } catch (err) {
-      setError('Fehler beim Speichern. Bitte versuche es erneut.');
+      setError(t('saveError'));
       console.error(err);
     } finally {
       setIsSubmitting(false);
@@ -70,19 +72,19 @@ export const UsernameModal: React.FC<UsernameModalProps> = ({ onComplete }) => {
             </div>
           </div>
           
-          <h2 className="text-2xl font-bold text-white text-center mb-2 text-glow-teal">Willkommen!</h2>
+          <h2 className="text-2xl font-bold text-white text-center mb-2 text-glow-teal">{t('welcome')}</h2>
           <p className="text-slate-400 text-center mb-6">
-            Bitte wähle einen Benutzernamen, damit deine Freunde dich finden können.
+            {t('chooseUsername')}
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Benutzername</label>
+              <label className="block text-sm font-medium text-slate-300 mb-1">{t('username')}</label>
               <input
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="z.B. max_mustermann"
+                placeholder={t('usernamePlaceholder')}
                 className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 outline-none focus:border-glow-teal transition-all"
                 required
                 minLength={3}
@@ -96,7 +98,7 @@ export const UsernameModal: React.FC<UsernameModalProps> = ({ onComplete }) => {
               disabled={isSubmitting || username.length < 3}
               className="w-full flex items-center justify-center gap-2 bg-[#1d7a82] hover:bg-[#155e63] disabled:opacity-50 disabled:cursor-not-allowed text-white py-3 rounded-xl font-medium transition-all hover:glow-teal"
             >
-              {isSubmitting ? 'Speichern...' : <><Check className="w-5 h-5" /> Bestätigen</>}
+              {isSubmitting ? t('saving') : <><Check className="w-5 h-5" /> {t('confirm')}</>}
             </button>
           </form>
         </div>

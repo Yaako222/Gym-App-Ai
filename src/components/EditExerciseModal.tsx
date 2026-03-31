@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X } from 'lucide-react';
 import { DayOfWeek, MuscleCategory, ExercisePlan } from '../types';
 import { updatePlan } from '../utils/storage';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface EditExerciseModalProps {
   isOpen: boolean;
@@ -14,6 +15,7 @@ const DAYS: DayOfWeek[] = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Frei
 const CATEGORIES: MuscleCategory[] = ['Arme', 'Beine', 'Brust', 'Rücken', 'Schultern', 'Bauch', 'Ganzkörper', 'Cardio', 'Andere'];
 
 export default function EditExerciseModal({ isOpen, onClose, plan }: EditExerciseModalProps) {
+  const { t } = useLanguage();
   const [name, setName] = useState('');
   const [dayOfWeek, setDayOfWeek] = useState<DayOfWeek>('Montag');
   const [muscleGroup, setMuscleGroup] = useState<MuscleCategory>('Brust');
@@ -57,7 +59,7 @@ export default function EditExerciseModal({ isOpen, onClose, plan }: EditExercis
             className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-[#1e293b] border border-[#1d7a82]/50 shadow-[0_0_30px_rgba(29,122,130,0.2)] rounded-2xl z-50 overflow-hidden"
           >
             <div className="flex justify-between items-center p-5 border-b border-white/10">
-              <h2 className="text-xl font-semibold text-white text-glow-teal">Übung bearbeiten</h2>
+              <h2 className="text-xl font-semibold text-white text-glow-teal">{t('editExercise')}</h2>
               <button onClick={onClose} className="text-slate-400 hover:text-white hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.8)] transition-all">
                 <X className="w-5 h-5" />
               </button>
@@ -65,39 +67,39 @@ export default function EditExerciseModal({ isOpen, onClose, plan }: EditExercis
             
             <form onSubmit={handleSubmit} className="p-5 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Übungsname</label>
+                <label className="block text-sm font-medium text-slate-300 mb-1">{t('exerciseName')}</label>
                 <input
                   type="text"
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="z.B. Bankdrücken"
+                  placeholder={t('exercisePlaceholder')}
                   className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-glow-teal transition-all"
                 />
               </div>
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">Muskelgruppe</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">{t('muscleGroup')}</label>
                   <select
                     value={muscleGroup}
                     onChange={(e) => setMuscleGroup(e.target.value as MuscleCategory)}
                     className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-glow-teal transition-all appearance-none"
                   >
                     {CATEGORIES.map(cat => (
-                      <option key={cat} value={cat} className="bg-[#1e293b]">{cat}</option>
+                      <option key={cat} value={cat} className="bg-[#1e293b]">{t(cat.toLowerCase() as any)}</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">Wochentag</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">{t('dayOfWeek')}</label>
                   <select
                     value={dayOfWeek}
                     onChange={(e) => setDayOfWeek(e.target.value as DayOfWeek)}
                     className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-glow-teal transition-all appearance-none"
                   >
                     {DAYS.map(day => (
-                      <option key={day} value={day} className="bg-[#1e293b]">{day}</option>
+                      <option key={day} value={day} className="bg-[#1e293b]">{t(day.toLowerCase() as any)}</option>
                     ))}
                   </select>
                 </div>
@@ -108,7 +110,7 @@ export default function EditExerciseModal({ isOpen, onClose, plan }: EditExercis
                   type="submit"
                   className="w-full bg-[#1d7a82] hover:bg-[#155e63] text-white py-3 rounded-xl font-medium transition-all glow-teal active:scale-95 border border-[#1d7a82]"
                 >
-                  Änderungen speichern
+                  {t('saveChanges')}
                 </button>
               </div>
             </form>
