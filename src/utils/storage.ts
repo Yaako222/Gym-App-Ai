@@ -1,5 +1,6 @@
 import { collection, doc, setDoc, deleteDoc, getDocs, getDoc, query, where, onSnapshot } from 'firebase/firestore';
-import { db, auth } from '../firebase';
+import { db, auth, googleProvider } from '../firebase';
+import { reauthenticateWithPopup } from 'firebase/auth';
 import { ExercisePlan, ExerciseLog, UserProfile, Friendship } from '../types';
 import { getCurrentISODate } from './time';
 
@@ -294,9 +295,10 @@ export const getUserProfile = async (userId: string) => {
 
 export const deleteAccount = async () => {
   if (!auth.currentUser) throw new Error('Not authenticated');
-  const userId = auth.currentUser.uid;
+  const user = auth.currentUser;
+  const userId = user.uid;
   
-  try {
+  const performDeletion = async () => {
     // 1. Delete user profile
     const userRef = doc(db, 'users', userId);
     await deleteDoc(userRef);
@@ -322,11 +324,24 @@ export const deleteAccount = async () => {
     }
     
     // 5. Delete auth account
-    await auth.currentUser.delete();
+    await user.delete();
+  };
+
+  try {
+    await performDeletion();
   } catch (error: any) {
     if (error.code === 'auth/requires-recent-login') {
-      throw new Error('REAUTH_REQUIRED');
+      try {
+        await reauthenticateWithPopup(user, googleProvider);
+        await performDeletion();
+      } catch (reauthError: any) {
+        if (reauthError.code === 'auth/popup-closed-by-user') {
+          throw new Error('REAUTH_CANCELLED');
+        }
+        throw new Error('REAUTH_REQUIRED');
+      }
+    } else {
+      throw error;
     }
-    throw error;
   }
 };

@@ -150,7 +150,7 @@ export default function Analytics({ logs }: AnalyticsProps) {
           </div>
           <div className="flex flex-wrap gap-2 mt-4 justify-center">
             {stats.pieData.map((entry, index) => (
-              <div key={entry.name} className="flex items-center gap-1 text-xs text-slate-300">
+              <div key={`${entry.name}-${index}`} className="flex items-center gap-1 text-xs text-slate-300">
                 <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
                 {entry.name}
               </div>

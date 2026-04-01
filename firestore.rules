@@ -32,7 +32,7 @@ service cloud.firestore {
              hasRequiredFields(['id', 'name', 'dayOfWeek', 'dateAdded', 'muscleGroup', 'userId']) &&
              request.resource.data.id is string &&
              request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 100 &&
-             request.resource.data.dayOfWeek is string && request.resource.data.dayOfWeek in ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'] &&
+             request.resource.data.dayOfWeek is string && request.resource.data.dayOfWeek in ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] &&
              request.resource.data.dateAdded is string &&
              request.resource.data.muscleGroup is string &&
              request.resource.data.userId == request.auth.uid;
@@ -55,13 +55,16 @@ service cloud.firestore {
     }
 
     function isValidUserProfile() {
-      return hasOnlyAllowedFields(['uid', 'username', 'searchableUsername', 'displayName', 'photoURL']) &&
+      return hasOnlyAllowedFields(['uid', 'username', 'searchableUsername', 'displayName', 'photoURL', 'theme', 'timezone', 'language']) &&
              hasRequiredFields(['uid', 'username', 'searchableUsername']) &&
              request.resource.data.uid == request.auth.uid &&
-             request.resource.data.username is string && request.resource.data.username.size() >= 3 && request.resource.data.username.size() <= 30 &&
+             request.resource.data.username is string && (request.resource.data.username == "" || (request.resource.data.username.size() >= 3 && request.resource.data.username.size() <= 30)) &&
              request.resource.data.searchableUsername is string &&
              (!('displayName' in request.resource.data) || request.resource.data.displayName is string) &&
-             (!('photoURL' in request.resource.data) || request.resource.data.photoURL is string);
+             (!('photoURL' in request.resource.data) || request.resource.data.photoURL is string) &&
+             (!('theme' in request.resource.data) || request.resource.data.theme in ['dark', 'light']) &&
+             (!('timezone' in request.resource.data) || request.resource.data.timezone is string) &&
+             (!('language' in request.resource.data) || request.resource.data.language in ['de', 'en']);
     }
 
     function isValidFriendship() {
@@ -78,6 +81,7 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create: if isOwner(userId) && isValidUserProfile();
       allow update: if isOwner(userId) && isValidUserProfile() && request.resource.data.uid == resource.data.uid;
+      allow delete: if isOwner(userId);
       
       match /plans/{planId} {
         allow read: if isOwner(userId) || isFriend(userId);

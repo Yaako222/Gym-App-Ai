@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Settings as SettingsIcon, Moon, Sun, Globe, User, LogOut, Check, X, Languages, Trash2 } from 'lucide-react';
+import { Settings as SettingsIcon, Moon, Sun, Globe, User, LogOut, Check, X, Languages, Trash2, Zap } from 'lucide-react';
 import { auth } from '../firebase';
 import { logout } from '../firebase';
 import { UserProfile } from '../types';
 import { updateUserProfile, checkUsernameAvailability, getUserProfile, deleteAccount } from '../utils/storage';
 import { useLanguage } from '../contexts/LanguageContext';
 
-export default function Settings() {
+interface SettingsProps {
+  setShowOnboarding?: (show: boolean) => void;
+}
+
+export default function Settings({ setShowOnboarding }: SettingsProps) {
   const { t, language, setLanguage } = useLanguage();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isEditingUsername, setIsEditingUsername] = useState(false);
@@ -110,6 +114,11 @@ export default function Settings() {
       // Auth state listener will handle redirection
     } catch (error: any) {
       setIsDeletingAccount(false);
+      if (error.message === 'REAUTH_CANCELLED') {
+        // User cancelled re-auth, just stop
+        return;
+      }
+      
       console.error('Error deleting account:', error);
       if (error.message === 'REAUTH_REQUIRED') {
         alert(t('reauthRequired'));
@@ -129,6 +138,13 @@ export default function Settings() {
     setTimezone(newTz);
     localStorage.setItem('gym_timezone', newTz);
     await updateUserProfile({ timezone: newTz });
+  };
+
+  const handleRepeatTutorial = async () => {
+    if (setShowOnboarding) {
+      await updateUserProfile({ hasCompletedOnboarding: false });
+      setShowOnboarding(true);
+    }
   };
 
   return (
@@ -266,6 +282,16 @@ export default function Settings() {
                 ))}
               </select>
               <p className="text-xs text-slate-500 mt-2">{t('timezoneInfo')}</p>
+            </div>
+
+            <div className="pt-4 border-t border-white/10">
+              <button
+                onClick={handleRepeatTutorial}
+                className="w-full flex items-center justify-center gap-2 bg-[#1d7a82]/10 hover:bg-[#1d7a82]/20 text-[#1d7a82] border border-[#1d7a82]/30 py-3 rounded-xl font-medium transition-all"
+              >
+                <Zap className="w-4 h-4 fill-current" />
+                {t('repeatTutorial' as any)}
+              </button>
             </div>
           </div>
         </section>
@@ -412,6 +438,14 @@ export default function Settings() {
                 className="absolute bg-white rounded-sm"
               />
             ))}
+
+            {/* Laser Scan Line */}
+            <motion.div
+              initial={{ top: '-10%' }}
+              animate={{ top: '110%' }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+              className="absolute left-0 right-0 h-2 bg-[#FF0050] shadow-[0_0_30px_10px_rgba(255,0,80,0.8)] z-50 pointer-events-none"
+            />
           </motion.div>
         )}
       </AnimatePresence>

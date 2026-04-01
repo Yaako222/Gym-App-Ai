@@ -86,7 +86,7 @@ export default function Dashboard({ plans, searchQuery }: DashboardProps) {
               {isRestDay ? (
                 <div className="flex flex-col items-center justify-center h-full text-center py-8 opacity-70">
                   <Coffee className="w-8 h-8 text-[#1d7a82] mb-2 drop-shadow-[0_0_8px_rgba(29,122,130,0.5)]" />
-                  <p className="text-sm text-[#1d7a82] font-medium">Restday</p>
+                  <p className="text-sm text-[#1d7a82] font-medium">{t('restDay')}</p>
                   <p className="text-xs text-slate-400 mt-1">{t('timeToRecover')}</p>
                 </div>
               ) : dayPlans.length === 0 ? (
@@ -125,6 +125,19 @@ export default function Dashboard({ plans, searchQuery }: DashboardProps) {
                         {t(plan.muscleGroup.toLowerCase() as TranslationKey)}
                       </span>
                     </div>
+                    {plan.exercises && plan.exercises.length > 0 && (
+                      <div className="mt-2 space-y-1">
+                        {plan.exercises.slice(0, 2).map((ex, idx) => (
+                          <div key={idx} className="text-[10px] text-slate-500 flex justify-between">
+                            <span>{ex.name}</span>
+                            <span className="text-[#1d7a82]">{ex.sets}x{ex.reps}</span>
+                          </div>
+                        ))}
+                        {plan.exercises.length > 2 && (
+                          <div className="text-[9px] text-slate-600 text-center italic">+{plan.exercises.length - 2} {t('more' as any)}</div>
+                        )}
+                      </div>
+                    )}
                   </motion.div>
                 ))
               )}

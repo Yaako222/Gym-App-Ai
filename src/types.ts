@@ -2,12 +2,20 @@ export type DayOfWeek = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'frida
 export type MuscleCategory = 'arme' | 'beine' | 'brust' | 'rücken' | 'schultern' | 'bauch' | 'ganzkörper' | 'cardio' | 'andere';
 export type WeightUnit = 'kg' | 'lbs';
 
+export interface Exercise {
+  name: string;
+  sets: number;
+  reps: number;
+  instructions: string;
+}
+
 export interface ExercisePlan {
   id: string;
   name: string;
   dayOfWeek: DayOfWeek;
   dateAdded: string;
   muscleGroup: MuscleCategory;
+  exercises?: Exercise[];
 }
 
 export interface ExerciseLog {
@@ -38,6 +46,7 @@ export interface UserProfile {
   theme?: 'dark' | 'light';
   timezone?: string;
   language?: 'de' | 'en';
+  hasCompletedOnboarding?: boolean;
 }
 
 export interface Friendship {

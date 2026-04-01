@@ -235,12 +235,12 @@ export default function Today({ plans, logs }: TodayProps) {
                 <div key={muscleGroup} className="space-y-4">
                   <h3 className="text-xl font-bold text-white border-b border-white/10 pb-2 flex items-center gap-2">
                     <span className="w-2 h-6 bg-[#FF0050] rounded-full glow-pink"></span>
-                    {muscleGroup}
+                    {t(muscleGroup.toLowerCase() as any)}
                   </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {groupPlans.map(plan => (
                   <div 
-                    key={plan.originalId || plan.id + (plan.isExtra ? '-extra' : '')} 
+                    key={plan.isExtra ? `extra-${plan.id}` : (plan.originalId ? `swapped-${plan.originalId}-${plan.id}` : plan.id)} 
                     className={`relative overflow-hidden bg-white/5 border ${laserActive === plan.id ? 'border-glow-teal' : 'border-white/10 hover:border-[#1d7a82]/50 hover:shadow-[0_0_15px_rgba(29,122,130,0.2)]'} rounded-2xl p-5 backdrop-blur-sm transition-all duration-300 group`}
                   >
                     <AnimatePresence>
@@ -281,6 +281,20 @@ export default function Today({ plans, logs }: TodayProps) {
                         )}
                       </div>
                     </div>
+
+                    {plan.exercises && plan.exercises.length > 0 && (
+                      <div className="mb-4 space-y-2 relative z-10">
+                        {plan.exercises.map((ex, idx) => (
+                          <div key={idx} className="bg-white/5 rounded-lg p-2 border border-white/5">
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="text-xs font-bold text-white">{ex.name}</span>
+                              <span className="text-[10px] text-[#1d7a82] font-black">{ex.sets}x{ex.reps}</span>
+                            </div>
+                            <p className="text-[10px] text-slate-400 leading-tight italic">{ex.instructions}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     
                     <div className="space-y-4 relative z-10">
                       {plan.muscleGroup === 'cardio' ? (

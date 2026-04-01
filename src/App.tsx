@@ -17,11 +17,15 @@ import Library from './components/Library';
 import { Friends } from './components/Friends';
 import Settings from './components/Settings';
 import { UsernameModal } from './components/UsernameModal';
+import { OnboardingAnimation } from './components/OnboardingAnimation';
+import { DataCollectionModal, UserData } from './components/DataCollectionModal';
+import { PlanGenerationLoader } from './components/PlanGenerationLoader';
 import GymLoader from './components/GymLoader';
 import { ExercisePlan, ExerciseLog } from './types';
+import { generateTrainingPlan } from './services/geminiService';
 import { auth, db, loginWithGoogle, logout } from './firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, onSnapshot, getDoc, doc } from 'firebase/firestore';
+import { collection, onSnapshot, getDoc, doc, updateDoc, addDoc, setDoc } from 'firebase/firestore';
 import { syncTimeWithInternet } from './utils/time';
 
 enum OperationType {
@@ -88,6 +92,9 @@ function App() {
   const [isAppLoading, setIsAppLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [hasProfile, setHasProfile] = useState<boolean | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showDataCollection, setShowDataCollection] = useState(false);
+  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
 
   useEffect(() => {
     async function initApp() {
@@ -126,6 +133,11 @@ function App() {
       if (docSnap.exists() && docSnap.data().username) {
         setHasProfile(true);
         const data = docSnap.data();
+        if (data.hasCompletedOnboarding === false && !data.hasStartedDataCollection) {
+          setShowDataCollection(true);
+        } else if (data.hasCompletedOnboarding === false && data.hasStartedDataCollection) {
+          setShowOnboarding(true);
+        }
         if (data.theme === 'light') {
           document.documentElement.classList.add('light-theme');
         } else {
@@ -169,6 +181,42 @@ function App() {
     };
   }, [user]);
 
+  const handleDataCollectionComplete = async (userData: UserData | null) => {
+    setShowDataCollection(false);
+    
+    if (userData && user) {
+      setIsGeneratingPlan(true);
+      try {
+        const generatedPlans = await generateTrainingPlan(userData);
+        
+        // Save plans to Firestore
+        for (const plan of generatedPlans) {
+          const planRef = doc(db, `users/${user.uid}/plans`, plan.id);
+          await setDoc(planRef, { ...plan, userId: user.uid });
+        }
+
+        // Update user profile to indicate data collection is done
+        const userRef = doc(db, 'users', user.uid);
+        await updateDoc(userRef, { 
+          hasStartedDataCollection: true,
+          fitnessData: userData 
+        });
+        
+        setIsGeneratingPlan(false);
+        setShowOnboarding(true);
+      } catch (error) {
+        console.error("Error generating plan:", error);
+        setIsGeneratingPlan(false);
+        setShowOnboarding(true); // Still show tutorial even if AI fails
+      }
+    } else if (user) {
+      // User skipped
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, { hasStartedDataCollection: true });
+      setShowOnboarding(true);
+    }
+  };
+
   if (!user && !isAppLoading) {
     return (
       <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-4">
@@ -195,7 +243,21 @@ function App() {
     <>
       <AnimatePresence>
         {isAppLoading && <GymLoader />}
-        {user && hasProfile === false && <UsernameModal onComplete={() => setHasProfile(true)} />}
+        {user && hasProfile === false && <UsernameModal onComplete={() => {
+          setHasProfile(true);
+          setShowDataCollection(true);
+        }} />}
+        {showDataCollection && <DataCollectionModal onComplete={handleDataCollectionComplete} />}
+        {isGeneratingPlan && <PlanGenerationLoader />}
+        {showOnboarding && (
+          <OnboardingAnimation onComplete={() => {
+            setShowOnboarding(false);
+            if (user) {
+              const userRef = doc(db, 'users', user.uid);
+              updateDoc(userRef, { hasCompletedOnboarding: true }).catch(console.error);
+            }
+          }} />
+        )}
       </AnimatePresence>
       <div className="min-h-screen bg-[#0f172a] text-slate-200 font-sans selection:bg-[#FF0050] selection:text-white">
       {/* Header */}
@@ -387,7 +449,7 @@ function App() {
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
             >
-              <Settings />
+              <Settings setShowOnboarding={setShowOnboarding} />
             </motion.div>
           )}
         </AnimatePresence>
