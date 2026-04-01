@@ -37,6 +37,29 @@ export interface ChatMessage {
   text: string;
 }
 
+export interface FoodItem {
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
+export interface NutritionLog {
+  id: string;
+  userId: string;
+  date: string;
+  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+  foodItems: FoodItem[];
+  totalCalories: number;
+  totalProtein: number;
+  totalCarbs: number;
+  totalFat: number;
+  waterIntakeMl: number;
+  feedback: string;
+  imageUrl?: string;
+}
+
 export interface UserProfile {
   uid: string;
   username: string;
@@ -47,6 +70,14 @@ export interface UserProfile {
   timezone?: string;
   language?: 'de' | 'en';
   hasCompletedOnboarding?: boolean;
+  hasStartedDataCollection?: boolean;
+  fitnessData?: {
+    weight: number;
+    height: number;
+    age: number;
+    gender: string;
+    goal: string;
+  };
 }
 
 export interface Friendship {

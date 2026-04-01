@@ -28,14 +28,15 @@ service cloud.firestore {
     }
 
     function isValidPlan() {
-      return hasOnlyAllowedFields(['id', 'name', 'dayOfWeek', 'dateAdded', 'muscleGroup', 'userId']) &&
+      return hasOnlyAllowedFields(['id', 'name', 'dayOfWeek', 'dateAdded', 'muscleGroup', 'userId', 'exercises']) &&
              hasRequiredFields(['id', 'name', 'dayOfWeek', 'dateAdded', 'muscleGroup', 'userId']) &&
              request.resource.data.id is string &&
              request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 100 &&
              request.resource.data.dayOfWeek is string && request.resource.data.dayOfWeek in ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] &&
              request.resource.data.dateAdded is string &&
              request.resource.data.muscleGroup is string &&
-             request.resource.data.userId == request.auth.uid;
+             request.resource.data.userId == request.auth.uid &&
+             (!('exercises' in request.resource.data) || request.resource.data.exercises is list);
     }
 
     function isValidLog() {
@@ -55,7 +56,7 @@ service cloud.firestore {
     }
 
     function isValidUserProfile() {
-      return hasOnlyAllowedFields(['uid', 'username', 'searchableUsername', 'displayName', 'photoURL', 'theme', 'timezone', 'language']) &&
+      return hasOnlyAllowedFields(['uid', 'username', 'searchableUsername', 'displayName', 'photoURL', 'theme', 'timezone', 'language', 'hasCompletedOnboarding', 'hasStartedDataCollection', 'fitnessData']) &&
              hasRequiredFields(['uid', 'username', 'searchableUsername']) &&
              request.resource.data.uid == request.auth.uid &&
              request.resource.data.username is string && (request.resource.data.username == "" || (request.resource.data.username.size() >= 3 && request.resource.data.username.size() <= 30)) &&
@@ -64,7 +65,10 @@ service cloud.firestore {
              (!('photoURL' in request.resource.data) || request.resource.data.photoURL is string) &&
              (!('theme' in request.resource.data) || request.resource.data.theme in ['dark', 'light']) &&
              (!('timezone' in request.resource.data) || request.resource.data.timezone is string) &&
-             (!('language' in request.resource.data) || request.resource.data.language in ['de', 'en']);
+             (!('language' in request.resource.data) || request.resource.data.language in ['de', 'en']) &&
+             (!('hasCompletedOnboarding' in request.resource.data) || request.resource.data.hasCompletedOnboarding is bool) &&
+             (!('hasStartedDataCollection' in request.resource.data) || request.resource.data.hasStartedDataCollection is bool) &&
+             (!('fitnessData' in request.resource.data) || request.resource.data.fitnessData is map);
     }
 
     function isValidFriendship() {
@@ -75,6 +79,27 @@ service cloud.firestore {
              request.resource.data.status in ['pending', 'accepted'] &&
              request.resource.data.createdAt is string &&
              (request.auth.uid == request.resource.data.user1 || request.auth.uid == request.resource.data.user2);
+    }
+
+    function isValidNutritionLog() {
+      return hasOnlyAllowedFields(['userId', 'date', 'mealType', 'foodItems', 'totalCalories', 'totalProtein', 'totalCarbs', 'totalFat', 'waterIntakeMl', 'feedback', 'imageUrl']) &&
+             hasRequiredFields(['userId', 'date', 'mealType', 'foodItems', 'totalCalories', 'totalProtein', 'totalCarbs', 'totalFat', 'waterIntakeMl', 'feedback']) &&
+             request.resource.data.userId == request.auth.uid &&
+             request.resource.data.mealType in ['breakfast', 'lunch', 'dinner', 'snack'] &&
+             request.resource.data.foodItems is list &&
+             request.resource.data.totalCalories is number &&
+             request.resource.data.totalProtein is number &&
+             request.resource.data.totalCarbs is number &&
+             request.resource.data.totalFat is number &&
+             request.resource.data.waterIntakeMl is number;
+    }
+
+    match /test/connection {
+      allow read: if true;
+    }
+
+    match /test/connection {
+      allow read: if true;
     }
 
     match /users/{userId} {
@@ -93,6 +118,12 @@ service cloud.firestore {
         allow read: if isOwner(userId) || isFriend(userId);
         allow create: if isOwner(userId) && isValidLog();
         allow update: if isOwner(userId) && isValidLog() && request.resource.data.userId == resource.data.userId;
+        allow delete: if isOwner(userId);
+      }
+      match /nutrition/{logId} {
+        allow read: if isOwner(userId) || isFriend(userId);
+        allow create: if isOwner(userId) && isValidNutritionLog();
+        allow update: if isOwner(userId) && isValidNutritionLog() && request.resource.data.userId == resource.data.userId;
         allow delete: if isOwner(userId);
       }
     }

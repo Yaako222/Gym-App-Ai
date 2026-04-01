@@ -49,10 +49,10 @@ export const DataCollectionModal: React.FC<DataCollectionModalProps> = ({ onComp
             <User className="w-8 h-8 text-white" />
           </div>
           <h2 className="text-3xl font-black text-white tracking-tighter uppercase italic text-glow-teal">
-            {t('onboardingDataTitle' as any)}
+            {t('onboardingDataTitle')}
           </h2>
           <p className="text-slate-400 mt-2">
-            {t('onboardingDataSubtitle' as any)}
+            {t('onboardingDataSubtitle')}
           </p>
         </div>
 
@@ -72,7 +72,7 @@ export const DataCollectionModal: React.FC<DataCollectionModalProps> = ({ onComp
             </div>
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                <Ruler className="w-3 h-3" /> {t('height' as any) || 'Größe'} (cm)
+                <Ruler className="w-3 h-3" /> {t('height')} (cm)
               </label>
               <input
                 type="number"
@@ -87,7 +87,7 @@ export const DataCollectionModal: React.FC<DataCollectionModalProps> = ({ onComp
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                <Calendar className="w-3 h-3" /> {t('age' as any) || 'Alter'}
+                <Calendar className="w-3 h-3" /> {t('age')}
               </label>
               <input
                 type="number"
@@ -99,23 +99,23 @@ export const DataCollectionModal: React.FC<DataCollectionModalProps> = ({ onComp
             </div>
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                <User className="w-3 h-3" /> {t('gender' as any) || 'Geschlecht'}
+                <User className="w-3 h-3" /> {t('gender')}
               </label>
               <select
                 value={data.gender}
                 onChange={(e) => setData({ ...data, gender: e.target.value as any })}
                 className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white focus:outline-none focus:border-[#1d7a82] transition-all appearance-none"
               >
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
+                <option value="male">{t('male')}</option>
+                <option value="female">{t('female')}</option>
+                <option value="other">{t('andere')}</option>
               </select>
             </div>
           </div>
 
           <div className="space-y-2">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-              <Target className="w-3 h-3" /> {t('fitnessGoal' as any)}
+              <Target className="w-3 h-3" /> {t('fitnessGoal')}
             </label>
             <div className="grid grid-cols-1 gap-2">
               {(['muscle_build', 'weight_loss', 'endurance'] as const).map((goalId) => (
@@ -129,7 +129,7 @@ export const DataCollectionModal: React.FC<DataCollectionModalProps> = ({ onComp
                       : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'
                   }`}
                 >
-                  <span className="font-bold">{t(goalId as any)}</span>
+                  <span className="font-bold">{t(goalId)}</span>
                   <span className="text-2xl">
                     {goalId === 'muscle_build' ? '💪' : goalId === 'weight_loss' ? '🔥' : '🏃'}
                   </span>
@@ -143,7 +143,7 @@ export const DataCollectionModal: React.FC<DataCollectionModalProps> = ({ onComp
               type="submit"
               className="w-full bg-[#1d7a82] hover:bg-[#155e63] text-white font-black py-4 rounded-2xl transition-all glow-teal flex items-center justify-center gap-2 uppercase tracking-widest"
             >
-              {t('createPlan' as any)}
+              {t('createPlan')}
               <ChevronRight className="w-5 h-5" />
             </button>
             <button
@@ -151,7 +151,7 @@ export const DataCollectionModal: React.FC<DataCollectionModalProps> = ({ onComp
               onClick={() => onComplete(null)}
               className="w-full text-slate-500 hover:text-white font-bold py-2 transition-colors uppercase tracking-widest text-sm"
             >
-              {t('skip' as any)}
+              {t('skip')}
             </button>
           </div>
         </form>

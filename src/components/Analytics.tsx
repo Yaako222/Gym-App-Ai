@@ -1,16 +1,17 @@
 import { useMemo, useState } from 'react';
-import { ExerciseLog } from '../types';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Activity, Dumbbell, Clock } from 'lucide-react';
+import { ExerciseLog, NutritionLog } from '../types';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import { Activity, Dumbbell, Clock, Utensils, Droplets } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface AnalyticsProps {
   logs: ExerciseLog[];
+  nutritionLogs?: NutritionLog[];
 }
 
 const COLORS = ['#FF0050', '#1d7a82', '#f59e0b', '#10b981', '#6366f1', '#ec4899', '#8b5cf6', '#14b8a6', '#f43f5e'];
 
-export default function Analytics({ logs }: AnalyticsProps) {
+export default function Analytics({ logs, nutritionLogs = [] }: AnalyticsProps) {
   const { t, language } = useLanguage();
   const [displayUnit, setDisplayUnit] = useState<'kg' | 'lbs'>('kg');
 
@@ -51,10 +52,38 @@ export default function Analytics({ logs }: AnalyticsProps) {
       .map(([date, volume]) => ({ date, volume: Math.round(volume) }))
       .slice(-14); // Last 14 entries
 
-    return { totalVolume, totalCardio, totalWorkouts, pieData, volumeData };
-  }, [logs, displayUnit, t, language]);
+    // Nutrition Stats
+    const nutritionByDate = nutritionLogs.reduce((acc, log) => {
+      const date = log.date.split('T')[0];
+      if (!acc[date]) acc[date] = { calories: 0, protein: 0, carbs: 0, fat: 0, water: 0 };
+      acc[date].calories += log.totalCalories;
+      acc[date].protein += log.totalProtein;
+      acc[date].carbs += log.totalCarbs;
+      acc[date].fat += log.totalFat;
+      acc[date].water += log.waterIntakeMl;
+      return acc;
+    }, {} as Record<string, { calories: number, protein: number, carbs: number, fat: number, water: number }>);
 
-  if (logs.length === 0) {
+    const nutritionDays = Object.keys(nutritionByDate).length || 1;
+    const yearlyAverages = {
+      calories: Math.round(Object.values(nutritionByDate).reduce((sum, d) => sum + d.calories, 0) / nutritionDays),
+      protein: Math.round(Object.values(nutritionByDate).reduce((sum, d) => sum + d.protein, 0) / nutritionDays),
+      carbs: Math.round(Object.values(nutritionByDate).reduce((sum, d) => sum + d.carbs, 0) / nutritionDays),
+      fat: Math.round(Object.values(nutritionByDate).reduce((sum, d) => sum + d.fat, 0) / nutritionDays),
+      water: Math.round(Object.values(nutritionByDate).reduce((sum, d) => sum + d.water, 0) / nutritionDays),
+    };
+
+    const nutritionData = Object.entries(nutritionByDate)
+      .map(([date, data]) => ({ 
+        date: new Date(date).toLocaleDateString(language === 'de' ? 'de-DE' : 'en-US', { day: '2-digit', month: '2-digit' }), 
+        ...data 
+      }))
+      .slice(-14);
+
+    return { totalVolume, totalCardio, totalWorkouts, pieData, volumeData, yearlyAverages, nutritionData };
+  }, [logs, nutritionLogs, displayUnit, t, language]);
+
+  if (logs.length === 0 && nutritionLogs.length === 0) {
     return (
       <div className="text-center py-20 text-slate-400">
         {t('noDataAnalytics')}
@@ -63,8 +92,9 @@ export default function Analytics({ logs }: AnalyticsProps) {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-end">
+    <div className="space-y-8">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold text-white text-glow-teal">{t('analytics')}</h1>
         <button
           onClick={() => setDisplayUnit(prev => prev === 'kg' ? 'lbs' : 'kg')}
           className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-xl text-sm font-medium transition-all hover:shadow-[0_0_15px_rgba(255,255,255,0.1)]"
@@ -72,6 +102,43 @@ export default function Analytics({ logs }: AnalyticsProps) {
           {t('showIn').replace('{unit}', displayUnit === 'kg' ? 'lbs' : 'kg')}
         </button>
       </div>
+
+      {/* Yearly Averages */}
+      {nutritionLogs.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+            <Activity className="w-5 h-5 text-[#FF0050]" />
+            {t('yearlyAverage')}
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm group hover:border-[#FF0050]/50 transition-all">
+              <div className="text-slate-400 text-xs mb-1 group-hover:text-white transition-colors">{t('calories')}</div>
+              <div className="text-xl font-bold text-white text-glow-pink">{stats.yearlyAverages.calories}</div>
+              <div className="text-[10px] text-slate-500 mt-1">kcal / Tag</div>
+            </div>
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm group hover:border-[#1d7a82]/50 transition-all">
+              <div className="text-slate-400 text-xs mb-1 group-hover:text-white transition-colors">{t('protein')}</div>
+              <div className="text-xl font-bold text-white text-glow-teal">{stats.yearlyAverages.protein}g</div>
+              <div className="text-[10px] text-slate-500 mt-1">/ Tag</div>
+            </div>
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm group hover:border-amber-500/50 transition-all">
+              <div className="text-slate-400 text-xs mb-1 group-hover:text-white transition-colors">{t('carbs')}</div>
+              <div className="text-xl font-bold text-white group-hover:text-amber-400 transition-colors">{stats.yearlyAverages.carbs}g</div>
+              <div className="text-[10px] text-slate-500 mt-1">/ Tag</div>
+            </div>
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm group hover:border-emerald-500/50 transition-all">
+              <div className="text-slate-400 text-xs mb-1 group-hover:text-white transition-colors">{t('fat')}</div>
+              <div className="text-xl font-bold text-white group-hover:text-emerald-400 transition-colors">{stats.yearlyAverages.fat}g</div>
+              <div className="text-[10px] text-slate-500 mt-1">/ Tag</div>
+            </div>
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm group hover:border-blue-500/50 transition-all">
+              <div className="text-slate-400 text-xs mb-1 group-hover:text-white transition-colors">{t('water')}</div>
+              <div className="text-xl font-bold text-white group-hover:text-blue-400 transition-colors">{stats.yearlyAverages.water}ml</div>
+              <div className="text-[10px] text-slate-500 mt-1">/ Tag</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -123,6 +190,25 @@ export default function Analytics({ logs }: AnalyticsProps) {
           </div>
         </div>
 
+        {/* Nutrition Chart */}
+        {nutritionLogs.length > 0 && (
+          <div className="bg-white/5 border border-white/10 hover:border-[#1d7a82]/30 hover:shadow-[0_0_20px_rgba(29,122,130,0.1)] rounded-2xl p-5 backdrop-blur-sm transition-all">
+            <h3 className="text-lg font-semibold text-white mb-6 text-glow-teal">{t('calories')} (kcal)</h3>
+            <div className="h-64 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={stats.nutritionData}>
+                  <XAxis dataKey="date" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
+                  />
+                  <Line type="monotone" dataKey="calories" stroke="#1d7a82" strokeWidth={3} dot={{ fill: '#1d7a82', r: 4 }} activeDot={{ r: 6, stroke: '#1d7a82', strokeWidth: 2, fill: '#fff' }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
+
         {/* Muscle Group Pie Chart */}
         <div className="bg-white/5 border border-white/10 hover:border-[#1d7a82]/30 hover:shadow-[0_0_20px_rgba(29,122,130,0.1)] rounded-2xl p-5 backdrop-blur-sm transition-all">
           <h3 className="text-lg font-semibold text-white mb-6 text-glow-teal">{t('muscleGroupDistribution')}</h3>
@@ -157,6 +243,26 @@ export default function Analytics({ logs }: AnalyticsProps) {
             ))}
           </div>
         </div>
+
+        {/* Water Chart */}
+        {nutritionLogs.length > 0 && (
+          <div className="bg-white/5 border border-white/10 hover:border-blue-500/30 hover:shadow-[0_0_20px_rgba(59,130,246,0.1)] rounded-2xl p-5 backdrop-blur-sm transition-all">
+            <h3 className="text-lg font-semibold text-white mb-6 text-blue-400">{t('water')} (ml)</h3>
+            <div className="h-64 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats.nutritionData}>
+                  <XAxis dataKey="date" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                  <Tooltip 
+                    cursor={{fill: 'rgba(255,255,255,0.05)'}}
+                    contentStyle={{ backgroundColor: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
+                  />
+                  <Bar dataKey="water" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

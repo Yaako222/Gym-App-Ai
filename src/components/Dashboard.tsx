@@ -1,156 +1,150 @@
-import { useState, useEffect } from 'react';
-import { ExercisePlan, DayOfWeek } from '../types';
-import { fuzzyMatch } from '../utils/search';
-import { deletePlan } from '../utils/storage';
-import { Trash2, Target, Edit2, Coffee } from 'lucide-react';
+import React from 'react';
 import { motion } from 'motion/react';
-import EditExerciseModal from './EditExerciseModal';
+import { Activity, Utensils, Droplets, Dumbbell, Clock, Hash, Footprints } from 'lucide-react';
+import { ExerciseLog, NutritionLog } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
-import { TranslationKey } from '../utils/translations';
+import { getCurrentDate, formatDate } from '../utils/time';
 
 interface DashboardProps {
-  plans: ExercisePlan[];
-  searchQuery: string;
+  exerciseLogs: ExerciseLog[];
+  nutritionLogs: NutritionLog[];
 }
 
-const DAYS: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-
-export default function Dashboard({ plans, searchQuery }: DashboardProps) {
+export default function Dashboard({ exerciseLogs, nutritionLogs }: DashboardProps) {
   const { t } = useLanguage();
-  const [editingPlan, setEditingPlan] = useState<ExercisePlan | null>(null);
-  const [weeklyRestDays, setWeeklyRestDays] = useState<DayOfWeek[]>([]);
+  const today = getCurrentDate();
+  const todayStr = today.toISOString().split('T')[0];
 
-  useEffect(() => {
-    const savedRestDays = localStorage.getItem('gym_weekly_restdays');
-    if (savedRestDays) {
-      // Normalize saved rest days
-      const rawRestDays = JSON.parse(savedRestDays) as string[];
-      const dayMapping: Record<string, DayOfWeek> = {
-        'montag': 'monday', 'dienstag': 'tuesday', 'mittwoch': 'wednesday',
-        'donnerstag': 'thursday', 'freitag': 'friday', 'samstag': 'saturday', 'sonntag': 'sunday'
-      };
-      const normalized = rawRestDays.map(d => dayMapping[d.toLowerCase()] || d.toLowerCase() as DayOfWeek);
-      setWeeklyRestDays(normalized);
-    }
-  }, []);
+  const todayExercises = exerciseLogs.filter(log => log.date.startsWith(todayStr));
+  const todayNutrition = nutritionLogs.filter(log => log.date.startsWith(todayStr));
 
-  const toggleRestDay = (day: DayOfWeek) => {
-    const newRestDays = weeklyRestDays.includes(day)
-      ? weeklyRestDays.filter(d => d !== day)
-      : [...weeklyRestDays, day];
-    
-    setWeeklyRestDays(newRestDays);
-    localStorage.setItem('gym_weekly_restdays', JSON.stringify(newRestDays));
-  };
+  const totalCalories = todayNutrition.reduce((sum, log) => sum + log.totalCalories, 0);
+  const totalProtein = todayNutrition.reduce((sum, log) => sum + log.totalProtein, 0);
+  const totalCarbs = todayNutrition.reduce((sum, log) => sum + log.totalCarbs, 0);
+  const totalFat = todayNutrition.reduce((sum, log) => sum + log.totalFat, 0);
+  const totalWater = todayNutrition.reduce((sum, log) => sum + log.waterIntakeMl, 0);
 
-  const filteredPlans = plans.filter(p => fuzzyMatch(searchQuery, p.name));
-
-  const handleDelete = async (id: string) => {
-    await deletePlan(id);
-  };
+  const hasActivity = todayExercises.length > 0 || todayNutrition.length > 0;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-      {DAYS.map(day => {
-        const dayMapping: Record<string, DayOfWeek> = {
-          'montag': 'monday', 'dienstag': 'tuesday', 'mittwoch': 'wednesday',
-          'donnerstag': 'thursday', 'freitag': 'friday', 'samstag': 'saturday', 'sonntag': 'sunday'
-        };
-        const dayPlans = filteredPlans.filter(p => {
-          const normalizedPlanDay = dayMapping[p.dayOfWeek.toLowerCase()] || p.dayOfWeek.toLowerCase();
-          return normalizedPlanDay === day;
-        });
-        
-        if (searchQuery && dayPlans.length === 0) return null;
+    <div className="space-y-8">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-white text-glow-teal">{t('dashboard')}</h1>
+          <p className="text-slate-400 mt-1">{t('todaySummary')}</p>
+        </div>
+        <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-2 backdrop-blur-sm">
+          <span className="text-[#1d7a82] font-medium">{formatDate(today.toISOString(), { weekday: 'long', day: '2-digit', month: 'long' })}</span>
+        </div>
+      </div>
 
-        const isRestDay = weeklyRestDays.includes(day);
-        const dayKey = day.toLowerCase() as TranslationKey;
-
-        return (
-          <div key={day} className={`bg-white/5 border ${isRestDay ? 'border-[#1d7a82]/50 shadow-[0_0_15px_rgba(29,122,130,0.1)]' : 'border-white/10 hover:border-[#1d7a82]/30 hover:shadow-[0_0_20px_rgba(29,122,130,0.15)]'} rounded-2xl p-5 backdrop-blur-sm flex flex-col min-h-[200px] transition-all group relative`}>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-white flex items-center gap-2 group-hover:text-glow-teal transition-all">
-                <div className={`w-2 h-2 rounded-full ${isRestDay ? 'bg-[#1d7a82] shadow-[0_0_8px_rgba(29,122,130,0.8)]' : 'bg-slate-600'}`}></div>
-                {t(dayKey)}
-              </h2>
-              <button
-                onClick={() => toggleRestDay(day)}
-                className={`p-2 rounded-lg transition-all ${isRestDay ? 'text-[#1d7a82] bg-[#1d7a82]/10' : 'text-slate-500 hover:text-[#1d7a82] hover:bg-white/5'}`}
-                title={isRestDay ? t('removeRestDay') : t('markRestDay')}
-              >
-                <Coffee className="w-4 h-4" />
-              </button>
+      {!hasActivity ? (
+        <div className="bg-white/5 border border-white/10 rounded-3xl p-12 text-center backdrop-blur-sm">
+          <Activity className="w-16 h-16 text-slate-600 mx-auto mb-4" />
+          <h3 className="text-xl font-medium text-white mb-2">{t('noActivityToday')}</h3>
+          <p className="text-slate-400 max-w-md mx-auto">
+            {t('todaySubtitle')}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Nutrition Summary */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm group hover:border-[#FF0050]/50 transition-all">
+                <div className="text-slate-400 text-xs mb-1 group-hover:text-white transition-colors">{t('calories')}</div>
+                <div className="text-2xl font-bold text-white text-glow-pink">{Math.round(totalCalories)}</div>
+                <div className="text-[10px] text-slate-500 mt-1">kcal</div>
+              </div>
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm group hover:border-[#1d7a82]/50 transition-all">
+                <div className="text-slate-400 text-xs mb-1 group-hover:text-white transition-colors">{t('protein')}</div>
+                <div className="text-2xl font-bold text-white text-glow-teal">{Math.round(totalProtein)}g</div>
+              </div>
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm group hover:border-amber-500/50 transition-all">
+                <div className="text-slate-400 text-xs mb-1 group-hover:text-white transition-colors">{t('carbs')}</div>
+                <div className="text-2xl font-bold text-white group-hover:text-amber-400 transition-colors">{Math.round(totalCarbs)}g</div>
+              </div>
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm group hover:border-emerald-500/50 transition-all">
+                <div className="text-slate-400 text-xs mb-1 group-hover:text-white transition-colors">{t('fat')}</div>
+                <div className="text-2xl font-bold text-white group-hover:text-emerald-400 transition-colors">{Math.round(totalFat)}g</div>
+              </div>
             </div>
-            
-            <div className="flex-1 flex flex-col gap-3">
-              {isRestDay ? (
-                <div className="flex flex-col items-center justify-center h-full text-center py-8 opacity-70">
-                  <Coffee className="w-8 h-8 text-[#1d7a82] mb-2 drop-shadow-[0_0_8px_rgba(29,122,130,0.5)]" />
-                  <p className="text-sm text-[#1d7a82] font-medium">{t('restDay')}</p>
-                  <p className="text-xs text-slate-400 mt-1">{t('timeToRecover')}</p>
-                </div>
-              ) : dayPlans.length === 0 ? (
-                <p className="text-sm text-slate-500 italic my-auto text-center py-8">{t('noExercises')}</p>
-              ) : (
-                dayPlans.map(plan => (
-                  <motion.div 
-                    layout
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    key={plan.id} 
-                    className="group/item relative bg-white/5 hover:bg-[#1d7a82]/10 border border-white/5 hover:border-[#1d7a82]/50 hover:shadow-[0_0_10px_rgba(29,122,130,0.2)] rounded-xl p-3 transition-all"
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-medium text-slate-200 pr-12 group-hover/item:text-white">{plan.name}</h3>
-                      <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover/item:opacity-100 transition-all">
-                        <button 
-                          onClick={() => setEditingPlan(plan)}
-                          className="text-slate-500 hover:text-[#1d7a82] hover:drop-shadow-[0_0_8px_rgba(29,122,130,0.8)] p-1"
-                          title={t('edit')}
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button 
-                          onClick={() => handleDelete(plan.id)}
-                          className="text-slate-500 hover:text-[#FF0050] hover:drop-shadow-[0_0_8px_rgba(255,0,80,0.8)] p-1"
-                          title={t('delete')}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+
+            <div className="bg-white/5 border border-white/10 rounded-3xl p-6 backdrop-blur-sm">
+              <div className="flex items-center gap-2 mb-6">
+                <Utensils className="w-5 h-5 text-[#FF0050]" />
+                <h2 className="text-lg font-semibold text-white">{t('recentMeals')}</h2>
+              </div>
+              <div className="space-y-3">
+                {todayNutrition.length === 0 ? (
+                  <p className="text-slate-500 text-sm italic">{t('noLogs')}</p>
+                ) : (
+                  todayNutrition.map(log => (
+                    <div key={log.id} className="flex items-center justify-between p-4 bg-black/20 rounded-2xl border border-white/5">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-[#FF0050]/10 flex items-center justify-center text-[#FF0050]">
+                          <Utensils className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <div className="text-white font-medium capitalize">{t(log.mealType as any)}</div>
+                          <div className="text-xs text-slate-400">{log.foodItems.map(f => f.name).join(', ')}</div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-white font-bold">{Math.round(log.totalCalories)} kcal</div>
+                        <div className="text-[10px] text-slate-500">{Math.round(log.totalProtein)}P · {Math.round(log.totalCarbs)}C · {Math.round(log.totalFat)}F</div>
                       </div>
                     </div>
-                    <div className="flex flex-wrap gap-2 text-xs text-slate-400">
-                      <span className="flex items-center gap-1 bg-black/20 px-2 py-1 rounded-md text-[#FF0050] drop-shadow-[0_0_5px_rgba(255,0,80,0.5)]">
-                        <Target className="w-3 h-3" />
-                        {t(plan.muscleGroup.toLowerCase() as TranslationKey)}
-                      </span>
-                    </div>
-                    {plan.exercises && plan.exercises.length > 0 && (
-                      <div className="mt-2 space-y-1">
-                        {plan.exercises.slice(0, 2).map((ex, idx) => (
-                          <div key={idx} className="text-[10px] text-slate-500 flex justify-between">
-                            <span>{ex.name}</span>
-                            <span className="text-[#1d7a82]">{ex.sets}x{ex.reps}</span>
-                          </div>
-                        ))}
-                        {plan.exercises.length > 2 && (
-                          <div className="text-[9px] text-slate-600 text-center italic">+{plan.exercises.length - 2} {t('more' as any)}</div>
-                        )}
-                      </div>
-                    )}
-                  </motion.div>
-                ))
-              )}
+                  ))
+                )}
+              </div>
             </div>
           </div>
-        );
-      })}
 
-      <EditExerciseModal 
-        isOpen={!!editingPlan} 
-        onClose={() => setEditingPlan(null)} 
-        plan={editingPlan} 
-      />
+          {/* Side Column: Water & Exercises */}
+          <div className="space-y-6">
+            <div className="bg-white/5 border border-white/10 rounded-3xl p-6 backdrop-blur-sm relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-[#1d7a82]/10 blur-3xl -mr-16 -mt-16 group-hover:bg-[#1d7a82]/20 transition-all"></div>
+              <div className="flex items-center gap-2 mb-4">
+                <Droplets className="w-5 h-5 text-[#1d7a82]" />
+                <h2 className="text-lg font-semibold text-white">{t('water')}</h2>
+              </div>
+              <div className="text-4xl font-bold text-white mb-2 text-glow-teal">{totalWater} <span className="text-lg font-normal text-slate-400">ml</span></div>
+              <div className="w-full bg-black/40 h-2 rounded-full overflow-hidden">
+                <div 
+                  className="bg-[#1d7a82] h-full shadow-[0_0_10px_rgba(29,122,130,0.8)] transition-all duration-1000" 
+                  style={{ width: `${Math.min((totalWater / 3000) * 100, 100)}%` }}
+                ></div>
+              </div>
+              <p className="text-[10px] text-slate-500 mt-2">Ziel: 3000ml</p>
+            </div>
+
+            <div className="bg-white/5 border border-white/10 rounded-3xl p-6 backdrop-blur-sm">
+              <div className="flex items-center gap-2 mb-6">
+                <Dumbbell className="w-5 h-5 text-[#1d7a82]" />
+                <h2 className="text-lg font-semibold text-white">{t('exercises')}</h2>
+              </div>
+              <div className="space-y-3">
+                {todayExercises.length === 0 ? (
+                  <p className="text-slate-500 text-sm italic">{t('noExercisesToday')}</p>
+                ) : (
+                  todayExercises.map(log => (
+                    <div key={log.id} className="p-3 bg-black/20 rounded-xl border border-white/5">
+                      <div className="text-white text-sm font-medium mb-1">{log.name}</div>
+                      <div className="flex items-center gap-3 text-[10px] text-slate-400">
+                        {log.weight && <span className="flex items-center gap-0.5"><Activity className="w-3 h-3 text-[#1d7a82]" /> {log.weight}{log.unit}</span>}
+                        {log.reps && <span className="flex items-center gap-0.5"><Hash className="w-3 h-3 text-[#1d7a82]" /> {log.reps}</span>}
+                        {log.duration && <span className="flex items-center gap-0.5"><Clock className="w-3 h-3 text-[#1d7a82]" /> {log.duration}m</span>}
+                        {log.steps && <span className="flex items-center gap-0.5"><Footprints className="w-3 h-3 text-[#1d7a82]" /> {log.steps}</span>}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -9,9 +9,9 @@ export const PlanGenerationLoader: React.FC = () => {
   const [status, setStatus] = useState<string>('');
 
   const statuses = [
-    t('analyzingBody' as any),
-    t('optimizingExercises' as any),
-    t('finalizingPlan' as any),
+    t('analyzingBody'),
+    t('optimizingExercises'),
+    t('finalizingPlan'),
   ];
 
   useEffect(() => {
@@ -72,7 +72,7 @@ export const PlanGenerationLoader: React.FC = () => {
 
       <div className="max-w-xs w-full text-center">
         <h2 className="text-2xl font-black text-white mb-2 tracking-tighter uppercase italic text-glow-teal">
-          {t('generatingPlan' as any)}
+          {t('generatingPlan')}
         </h2>
         <p className="text-slate-400 text-sm mb-8 font-bold tracking-widest uppercase h-5">
           {status}

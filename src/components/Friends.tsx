@@ -3,7 +3,8 @@ import { motion } from 'motion/react';
 import { Search, UserPlus, UserCheck, Clock, Activity, Hash, Footprints, Trash2, BarChart2, Calendar } from 'lucide-react';
 import { auth, db } from '../firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { UserProfile, Friendship, ExerciseLog } from '../types';
+import { handleFirestoreError, OperationType } from '../utils/storage';
+import { UserProfile, Friendship, ExerciseLog, NutritionLog } from '../types';
 import { searchUsersByUsername, sendFriendRequest, acceptFriendRequest, getUserProfile, removeFriend } from '../utils/storage';
 import { getCurrentDate, formatDate } from '../utils/time';
 import Analytics from './Analytics';
@@ -17,6 +18,7 @@ export const Friends: React.FC = () => {
   const [friendsProfiles, setFriendsProfiles] = useState<Record<string, UserProfile>>({});
   const [selectedFriend, setSelectedFriend] = useState<string | null>(null);
   const [friendLogs, setFriendLogs] = useState<ExerciseLog[]>([]);
+  const [friendNutritionLogs, setFriendNutritionLogs] = useState<NutritionLog[]>([]);
   const [friendTab, setFriendTab] = useState<'7days' | 'analytics'>('7days');
   const [friendToRemove, setFriendToRemove] = useState<{id: string, isSelected: boolean} | null>(null);
 
@@ -33,6 +35,8 @@ export const Friends: React.FC = () => {
         const others = prev.filter(f => f.user1 !== userId);
         return [...others, ...f1];
       });
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'friendships');
     });
 
     const unsubscribe2 = onSnapshot(q2, (snapshot) => {
@@ -41,6 +45,8 @@ export const Friends: React.FC = () => {
         const others = prev.filter(f => f.user2 !== userId);
         return [...others, ...f2];
       });
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'friendships');
     });
 
     return () => {
@@ -76,19 +82,31 @@ export const Friends: React.FC = () => {
   useEffect(() => {
     if (!selectedFriend) {
       setFriendLogs([]);
+      setFriendNutritionLogs([]);
       return;
     }
 
-    const q = query(
-      collection(db, `users/${selectedFriend}/logs`)
-    );
+    const logsQ = query(collection(db, `users/${selectedFriend}/logs`));
+    const nutritionQ = query(collection(db, `users/${selectedFriend}/nutrition`));
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribeLogs = onSnapshot(logsQ, (snapshot) => {
       const logsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ExerciseLog));
       setFriendLogs(logsData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, `users/${selectedFriend}/logs`);
     });
 
-    return () => unsubscribe();
+    const unsubscribeNutrition = onSnapshot(nutritionQ, (snapshot) => {
+      const nutritionData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NutritionLog));
+      setFriendNutritionLogs(nutritionData);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, `users/${selectedFriend}/nutrition`);
+    });
+
+    return () => {
+      unsubscribeLogs();
+      unsubscribeNutrition();
+    };
   }, [selectedFriend]);
 
   const handleSearch = async () => {
@@ -281,7 +299,7 @@ export const Friends: React.FC = () => {
               
               {friendTab === 'analytics' ? (
                 <div className="mt-4">
-                  <Analytics logs={friendLogs} />
+                  <Analytics logs={friendLogs} nutritionLogs={friendNutritionLogs} />
                 </div>
               ) : (
                 <>

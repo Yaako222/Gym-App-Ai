@@ -56,6 +56,26 @@
         "createdAt": { "type": "string" }
       },
       "required": ["friendId", "status", "createdAt"]
+    },
+    "NutritionLog": {
+      "title": "NutritionLog",
+      "description": "A logged meal or water intake.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "date": { "type": "string" },
+        "mealType": { "type": "string", "enum": ["breakfast", "lunch", "dinner", "snack"] },
+        "foodItems": { "type": "array" },
+        "totalCalories": { "type": "number" },
+        "totalProtein": { "type": "number" },
+        "totalCarbs": { "type": "number" },
+        "totalFat": { "type": "number" },
+        "waterIntakeMl": { "type": "number" },
+        "feedback": { "type": "string" },
+        "imageUrl": { "type": "string" }
+      },
+      "required": ["id", "userId", "date", "mealType", "foodItems", "totalCalories", "totalProtein", "totalCarbs", "totalFat", "waterIntakeMl", "feedback"]
     }
   },
   "firestore": {
@@ -74,6 +94,10 @@
     "/users/{userId}/logs/{logId}": {
       "schema": { "$ref": "#/entities/ExerciseLog" },
       "description": "User's exercise logs"
+    },
+    "/users/{userId}/nutrition/{logId}": {
+      "schema": { "$ref": "#/entities/NutritionLog" },
+      "description": "User's nutrition logs"
     }
   }
 }

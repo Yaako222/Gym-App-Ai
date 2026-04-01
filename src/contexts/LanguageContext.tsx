@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Language, translations, TranslationKey } from '../utils/translations';
 import { auth, db } from '../firebase';
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
+import { handleFirestoreError, OperationType } from '../utils/storage';
 
 interface LanguageContextType {
   language: Language;
@@ -12,7 +13,7 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [language, setLanguageState] = useState<Language>('de');
+  const [language, setLanguageState] = useState<Language>('en');
 
   useEffect(() => {
     const user = auth.currentUser;
@@ -26,6 +27,8 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           setLanguageState(data.language as Language);
         }
       }
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, `users/${user.uid}`);
     });
 
     return () => unsubscribe();

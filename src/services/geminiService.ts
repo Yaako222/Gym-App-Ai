@@ -1,8 +1,6 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { Type } from "@google/genai";
 import { ExercisePlan } from "../types";
-
-// The Gemini API key is handled by the platform
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY as string });
+import { getAI, switchToNextKey, isAIWorking } from "./aiProvider";
 
 const SYSTEM_INSTRUCTION = `
 You are a world-class fitness coach. Your task is to generate a personalized weekly training plan for the GYM based on user data.
@@ -41,49 +39,64 @@ export async function generateTrainingPlan(userData: {
   
   Ensure all exercises are suitable for a typical gym environment with weights and machines.`;
 
-  const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    contents: prompt,
-    config: {
-      systemInstruction: SYSTEM_INSTRUCTION,
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            name: { type: Type.STRING },
-            dayOfWeek: { type: Type.STRING },
-            muscleGroup: { type: Type.STRING },
-            exercises: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  name: { type: Type.STRING },
-                  sets: { type: Type.INTEGER },
-                  reps: { type: Type.INTEGER },
-                  instructions: { type: Type.STRING },
+  const executeRequest = async (): Promise<ExercisePlan[]> => {
+    const ai = getAI();
+    if (!ai) {
+      throw new Error("AI_NOT_WORKING");
+    }
+
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: prompt,
+        config: {
+          systemInstruction: SYSTEM_INSTRUCTION,
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                name: { type: Type.STRING },
+                dayOfWeek: { type: Type.STRING },
+                muscleGroup: { type: Type.STRING },
+                exercises: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      name: { type: Type.STRING },
+                      sets: { type: Type.INTEGER },
+                      reps: { type: Type.INTEGER },
+                      instructions: { type: Type.STRING },
+                    },
+                    required: ["name", "sets", "reps", "instructions"],
+                  },
                 },
-                required: ["name", "sets", "reps", "instructions"],
               },
+              required: ["name", "dayOfWeek", "muscleGroup", "exercises"],
             },
           },
-          required: ["name", "dayOfWeek", "muscleGroup", "exercises"],
         },
-      },
-    },
-  });
+      });
 
-  try {
-    const plans = JSON.parse(response.text || "[]");
-    return plans.map((p: any) => ({
-      ...p,
-      id: Math.random().toString(36).substr(2, 9),
-      dateAdded: new Date().toISOString(),
-    }));
-  } catch (e) {
-    console.error("Error parsing AI response", e);
-    return [];
-  }
+      const plans = JSON.parse(response.text || "[]");
+      return plans.map((p: any) => ({
+        ...p,
+        id: Math.random().toString(36).substr(2, 9),
+        dateAdded: new Date().toISOString(),
+      }));
+    } catch (e: any) {
+      if (e.message?.includes("API_KEY_INVALID") || e.message?.includes("403") || e.message?.includes("429")) {
+        switchToNextKey();
+        if (isAIWorking()) {
+          return executeRequest();
+        }
+      }
+      console.error("Error generating plan", e);
+      throw e;
+    }
+  };
+
+  return executeRequest();
 }

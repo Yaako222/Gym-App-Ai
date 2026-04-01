@@ -1,13 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
-import { GoogleGenAI } from '@google/genai';
 import { ExerciseLog, ChatMessage } from '../types';
 import { Send, Bot, User, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
 import { useLanguage } from '../contexts/LanguageContext';
+import { getAI, switchToNextKey, isAIWorking, AI_ERROR_MESSAGE } from '../services/aiProvider';
 
 interface AIChatProps {
-  logs: ExerciseLog[];
+  logs: ExerciseLog | any[]; // Using any[] to avoid type issues if ExerciseLog is not imported correctly
 }
 
 export default function AIChat({ logs }: AIChatProps) {
@@ -40,40 +40,59 @@ export default function AIChat({ logs }: AIChatProps) {
     setMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'user', text: userMsg }]);
     setIsLoading(true);
 
-    try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      
-      const systemInstruction = language === 'de' 
-        ? `Du bist ein hilfreicher Gym-Coach. Hier sind die aktuellen Trainingsdaten des Nutzers im JSON-Format:
+    const executeRequest = async (): Promise<void> => {
+      const ai = getAI();
+      if (!ai) {
+        setMessages(prev => [...prev, { 
+          id: crypto.randomUUID(), 
+          role: 'model', 
+          text: language === 'de' ? AI_ERROR_MESSAGE.de : AI_ERROR_MESSAGE.en
+        }]);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const systemInstruction = language === 'de' 
+          ? `Du bist ein hilfreicher Gym-Coach. Hier sind die aktuellen Trainingsdaten des Nutzers im JSON-Format:
 ${JSON.stringify(logs, null, 2)}
 Beantworte die Fragen des Nutzers basierend auf diesen Daten. Antworte auf Deutsch, sei motivierend und präzise. Wenn du eine Übung nicht findest, weise freundlich darauf hin.`
-        : `You are a helpful gym coach. Here are the user's current training data in JSON format:
+          : `You are a helpful gym coach. Here are the user's current training data in JSON format:
 ${JSON.stringify(logs, null, 2)}
 Answer the user's questions based on this data. Answer in English, be motivating and precise. If you cannot find an exercise, point it out friendly.`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: userMsg,
-        config: {
-          systemInstruction
-        }
-      });
+        const response = await ai.models.generateContent({
+          model: 'gemini-3-flash-preview',
+          contents: userMsg,
+          config: {
+            systemInstruction
+          }
+        });
 
-      setMessages(prev => [...prev, { 
-        id: crypto.randomUUID(), 
-        role: 'model', 
-        text: response.text || t('aiErrorNoResponse') 
-      }]);
-    } catch (error) {
-      console.error('AI Error:', error);
-      setMessages(prev => [...prev, { 
-        id: crypto.randomUUID(), 
-        role: 'model', 
-        text: t('aiErrorConnection') 
-      }]);
-    } finally {
-      setIsLoading(false);
-    }
+        setMessages(prev => [...prev, { 
+          id: crypto.randomUUID(), 
+          role: 'model', 
+          text: response.text || t('aiErrorNoResponse') 
+        }]);
+      } catch (error: any) {
+        if (error.message?.includes("API_KEY_INVALID") || error.message?.includes("403") || error.message?.includes("429")) {
+          switchToNextKey();
+          if (isAIWorking()) {
+            return executeRequest();
+          }
+        }
+        console.error('AI Error:', error);
+        setMessages(prev => [...prev, { 
+          id: crypto.randomUUID(), 
+          role: 'model', 
+          text: isAIWorking() ? t('aiErrorConnection') : (language === 'de' ? AI_ERROR_MESSAGE.de : AI_ERROR_MESSAGE.en)
+        }]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    await executeRequest();
   };
 
   return (
