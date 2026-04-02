@@ -125,19 +125,16 @@ export default function Dashboard({ plans, searchQuery }: DashboardProps) {
                         {t(plan.muscleGroup.toLowerCase() as TranslationKey)}
                       </span>
                     </div>
-                    {plan.exercises && plan.exercises.length > 0 && (
-                      <div className="mt-2 space-y-1">
-                        {plan.exercises.slice(0, 2).map((ex, idx) => (
-                          <div key={idx} className="text-[10px] text-slate-500 flex justify-between">
-                            <span>{ex.name}</span>
-                            <span className="text-[#1d7a82]">{ex.sets}x{ex.reps}</span>
-                          </div>
-                        ))}
-                        {plan.exercises.length > 2 && (
-                          <div className="text-[9px] text-slate-600 text-center italic">+{plan.exercises.length - 2} {t('more' as any)}</div>
-                        )}
+                    <div className="mt-2 space-y-1">
+                      <div className="text-[10px] text-slate-500 flex justify-between">
+                        <span className="text-[#1d7a82]">{plan.sets || 3} Sets × {plan.reps || 12} Reps</span>
                       </div>
-                    )}
+                      {plan.instructions && (
+                        <div className="text-[10px] text-slate-500 truncate italic">
+                          {plan.instructions}
+                        </div>
+                      )}
+                    </div>
                   </motion.div>
                 ))
               )}

@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { ExerciseLog, ChatMessage } from '../types';
-import { Send, Bot, User, Loader2 } from 'lucide-react';
+import { Send, Bot, User, Loader2, Star } from 'lucide-react';
 import { motion } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getAI, switchToNextKey, isAIWorking, AI_ERROR_MESSAGE } from '../services/aiProvider';
+import { usePro } from '../contexts/ProContext';
 
 interface AIChatProps {
   logs: ExerciseLog | any[]; // Using any[] to avoid type issues if ExerciseLog is not imported correctly
@@ -12,6 +13,7 @@ interface AIChatProps {
 
 export default function AIChat({ logs }: AIChatProps) {
   const { t, language } = useLanguage();
+  const { isPro, openProModal } = usePro();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -30,6 +32,24 @@ export default function AIChat({ logs }: AIChatProps) {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  if (!isPro) {
+    return (
+      <div className="bg-white/5 border border-white/10 rounded-2xl backdrop-blur-sm flex flex-col h-[600px] max-h-[70vh] items-center justify-center p-8 text-center">
+        <div className="bg-[#FF0050]/20 p-4 rounded-full mb-4">
+          <Star className="w-12 h-12 text-[#FF0050]" />
+        </div>
+        <h3 className="text-2xl font-bold text-white mb-2">PRO Feature</h3>
+        <p className="text-slate-400 mb-6">Upgrade to GymTracker PRO to unlock your personal AI Coach.</p>
+        <button 
+          onClick={openProModal}
+          className="bg-[#FF0050] hover:bg-[#e60048] text-white px-6 py-3 rounded-xl font-medium transition-all glow-pink"
+        >
+          Upgrade Now
+        </button>
+      </div>
+    );
+  }
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();

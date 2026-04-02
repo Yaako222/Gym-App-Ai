@@ -21,6 +21,10 @@ export const translations = {
     water: 'Wasser',
     todaySummary: 'Heutige Zusammenfassung',
     noActivityToday: 'Heute noch keine Aktivitäten aufgezeichnet.',
+    connectStrava: 'Strava Verbinden',
+    syncGps: 'Synchronisiere deine GPS-Aktivitäten und Routen direkt in dein Dashboard.',
+    noRecentActivities: 'Keine kürzlichen Aktivitäten gefunden.',
+    stravaActivities: 'Strava Aktivitäten',
     logout: 'Abmelden',
     searchPlaceholder: 'Übung suchen (z.B. Triceps)...',
     addExercise: 'Übung hinzufügen',
@@ -224,6 +228,8 @@ export const translations = {
     gender: 'Geschlecht',
     male: 'Männlich',
     female: 'Weiblich',
+    payNow: 'Jetzt bezahlen 9,99€',
+    processing: 'Wird verarbeitet...',
   },
   en: {
     today: 'Today',
@@ -245,6 +251,10 @@ export const translations = {
     water: 'Water',
     todaySummary: 'Today\'s Summary',
     noActivityToday: 'No activities recorded today yet.',
+    connectStrava: 'Connect Strava',
+    syncGps: 'Sync your GPS activities and routes directly to your dashboard.',
+    noRecentActivities: 'No recent activities found.',
+    stravaActivities: 'Strava Activities',
     logout: 'Logout',
     searchPlaceholder: 'Search exercise (e.g. Triceps)...',
     addExercise: 'Add Exercise',
@@ -448,6 +458,8 @@ export const translations = {
     gender: 'Gender',
     male: 'Male',
     female: 'Female',
+    payNow: 'Pay 9.99€',
+    processing: 'Processing...',
   }
 };
 

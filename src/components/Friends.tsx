@@ -217,12 +217,22 @@ export const Friends: React.FC = () => {
                       <div className="text-sm text-slate-400">@{profile.username}</div>
                     </div>
                   </div>
-                  <button
-                    onClick={() => acceptFriendRequest(req.id)}
-                    className="bg-[#FF0050] hover:bg-[#cc0040] text-white px-4 py-2 rounded-lg text-sm transition-all hover:glow-pink"
-                  >
-                    {t('accept')}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => acceptFriendRequest(req.id)}
+                      className="bg-[#FF0050] hover:bg-[#cc0040] text-white px-4 py-2 rounded-lg text-sm transition-all hover:glow-pink"
+                    >
+                      {t('accept')}
+                    </button>
+                    <button
+                      onClick={() => {
+                        import('../utils/storage').then(m => m.declineFriendRequest(req.id));
+                      }}
+                      className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-sm transition-all"
+                    >
+                      {t('decline' as any) || 'Decline'}
+                    </button>
+                  </div>
                 </div>
               );
             })}

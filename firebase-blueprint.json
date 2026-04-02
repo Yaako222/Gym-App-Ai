@@ -98,6 +98,32 @@
     "/users/{userId}/nutrition/{logId}": {
       "schema": { "$ref": "#/entities/NutritionLog" },
       "description": "User's nutrition logs"
+    },
+    "/pro_users/{userId}": {
+      "schema": {
+        "title": "ProUser",
+        "description": "Pro subscription status",
+        "type": "object",
+        "properties": {
+          "active": { "type": "boolean" },
+          "createdAt": { "type": "string" }
+        },
+        "required": ["active", "createdAt"]
+      },
+      "description": "Pro subscription status"
+    },
+    "/vip/{email}": {
+      "schema": {
+        "title": "VipUser",
+        "description": "VIP status for specific emails",
+        "type": "object",
+        "properties": {
+          "active": { "type": "boolean" },
+          "email": { "type": "string" }
+        },
+        "required": ["active", "email"]
+      },
+      "description": "VIP status for specific emails"
     }
   }
 }

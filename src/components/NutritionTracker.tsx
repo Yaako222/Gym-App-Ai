@@ -9,30 +9,34 @@ import { handleFirestoreError, OperationType } from '../utils/storage';
 import { NutritionLog, FoodItem } from '../types';
 import { compressImage } from '../utils/imageUtils';
 
+import { usePro } from '../contexts/ProContext';
+
 export const NutritionTracker: React.FC = () => {
   const { t, language } = useLanguage();
+  const { isPro, openProModal } = usePro();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [logs, setLogs] = useState<NutritionLog[]>([]);
   const [waterIntake, setWaterIntake] = useState(0);
   const [showCamera, setShowCamera] = useState(false);
   const [mealType, setMealType] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>('lunch');
+  const [waterButtons, setWaterButtons] = useState([250, 500, 750]);
 
   useEffect(() => {
     if (!auth.currentUser) return;
     const q = query(
       collection(db, `users/${auth.currentUser.uid}/nutrition`),
       orderBy('date', 'desc'),
-      limit(10)
+      limit(50)
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const newLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NutritionLog));
       setLogs(newLogs);
       
-      // Calculate today's water
+      // Calculate today's water correctly
       const today = new Date().toISOString().split('T')[0];
       const todayWater = newLogs
-        .filter(log => log.date.startsWith(today))
-        .reduce((sum, log) => sum + log.waterIntakeMl, 0);
+        .filter(log => log.date.startsWith(today) && log.waterIntakeMl)
+        .reduce((sum, log) => sum + (log.waterIntakeMl || 0), 0);
       setWaterIntake(todayWater);
     }, (error) => {
       handleFirestoreError(error, OperationType.GET, `users/${auth.currentUser?.uid}/nutrition`);
@@ -147,17 +151,36 @@ export const NutritionTracker: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-3 gap-3">
-            {[250, 500, 750].map((amount) => (
-              <button
-                key={amount}
-                onClick={() => addWater(amount)}
-                className="bg-white/5 hover:bg-[#1d7a82]/20 border border-white/10 hover:border-[#1d7a82]/50 rounded-2xl py-4 transition-all group/btn"
-              >
-                <div className="flex flex-col items-center gap-1">
-                  <Plus className="w-4 h-4 text-slate-500 group-hover/btn:text-[#1d7a82]" />
-                  <span className="font-bold text-white tracking-widest uppercase text-xs">{amount}ml</span>
+            {waterButtons.map((amount, index) => (
+              <div key={index} className="flex flex-col gap-2">
+                <div className="flex items-center bg-black/20 rounded-xl px-2 py-1 border border-white/5">
+                  <input
+                    type="number"
+                    value={amount}
+                    onChange={(e) => {
+                      const newButtons = [...waterButtons];
+                      newButtons[index] = Number(e.target.value);
+                      setWaterButtons(newButtons);
+                    }}
+                    className="w-full bg-transparent text-white text-center text-sm outline-none"
+                  />
+                  <span className="text-xs text-slate-500">ml</span>
                 </div>
-              </button>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => addWater(-amount)}
+                    className="flex-1 bg-white/5 hover:bg-red-500/20 border border-white/10 hover:border-red-500/50 rounded-xl py-2 transition-all flex items-center justify-center"
+                  >
+                    <span className="font-bold text-white">-</span>
+                  </button>
+                  <button
+                    onClick={() => addWater(amount)}
+                    className="flex-[2] bg-white/5 hover:bg-[#1d7a82]/20 border border-white/10 hover:border-[#1d7a82]/50 rounded-xl py-2 transition-all flex items-center justify-center"
+                  >
+                    <Plus className="w-4 h-4 text-slate-500" />
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
         </div>
@@ -165,18 +188,39 @@ export const NutritionTracker: React.FC = () => {
 
       {/* Analysis Button */}
       <div className="grid grid-cols-1 gap-4">
-        <button
-          onClick={() => setShowCamera(true)}
-          className="bg-gradient-to-br from-[#1d7a82] to-[#155e63] p-8 rounded-[2.5rem] border border-white/10 shadow-[0_0_30px_rgba(29,122,130,0.3)] group relative overflow-hidden"
-        >
-          <div className="absolute top-0 right-0 p-8 opacity-20 group-hover:scale-110 transition-transform">
-            <Camera className="w-20 h-20 text-white" />
+        {isPro ? (
+          <button
+            onClick={() => setShowCamera(true)}
+            className="bg-gradient-to-br from-[#1d7a82] to-[#155e63] p-8 rounded-[2.5rem] border border-white/10 shadow-[0_0_30px_rgba(29,122,130,0.3)] group relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 p-8 opacity-20 group-hover:scale-110 transition-transform">
+              <Camera className="w-20 h-20 text-white" />
+            </div>
+            <div className="relative z-10 text-left">
+              <h2 className="text-2xl font-black text-white uppercase tracking-tighter italic mb-2">{t('analyzeMeal')}</h2>
+              <p className="text-white/70 font-medium text-sm max-w-[200px]">{t('analyzeMealSubtitle')}</p>
+            </div>
+          </button>
+        ) : (
+          <div className="bg-[#1e293b] p-8 rounded-[2.5rem] border border-white/10 text-center relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-5">
+              <Camera className="w-24 h-24 text-white" />
+            </div>
+            <div className="relative z-10">
+              <div className="bg-[#FF0050]/20 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Camera className="w-6 h-6 text-[#FF0050]" />
+              </div>
+              <h2 className="text-xl font-bold text-white mb-2">PRO Feature</h2>
+              <p className="text-slate-400 text-sm mb-4">Upgrade to PRO to analyze your meals with AI.</p>
+              <button 
+                onClick={openProModal}
+                className="bg-[#FF0050] hover:bg-[#e60048] text-white px-6 py-2 rounded-xl text-sm font-medium transition-all glow-pink"
+              >
+                Upgrade Now
+              </button>
+            </div>
           </div>
-          <div className="relative z-10 text-left">
-            <h2 className="text-2xl font-black text-white uppercase tracking-tighter italic mb-2">{t('analyzeMeal')}</h2>
-            <p className="text-white/70 font-medium text-sm max-w-[200px]">{t('analyzeMealSubtitle')}</p>
-          </div>
-        </button>
+        )}
       </div>
 
       {/* Recent Logs */}

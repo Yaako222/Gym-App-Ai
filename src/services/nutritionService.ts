@@ -9,7 +9,8 @@ Analysis Process:
 1. Identify all recognizable food items on the plate.
 2. Estimate portion sizes based on visual context.
 3. Determine for each component: Calories, Protein (g), Carbohydrates (g), Fats (g).
-4. Consider user data (weight, goal) and training plan to provide feedback.
+4. Ensure the macro distribution is accurate and adds up correctly (1g Protein = 4 kcal, 1g Carbs = 4 kcal, 1g Fat = 9 kcal). The total calories MUST roughly equal the sum of the macros.
+5. Consider user data (weight, goal) and training plan to provide feedback.
 
 Additional Features:
 - Provide a hint about water intake (water_hint).

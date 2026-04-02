@@ -28,7 +28,7 @@ service cloud.firestore {
     }
 
     function isValidPlan() {
-      return hasOnlyAllowedFields(['id', 'name', 'dayOfWeek', 'dateAdded', 'muscleGroup', 'userId', 'exercises']) &&
+      return hasOnlyAllowedFields(['id', 'name', 'dayOfWeek', 'dateAdded', 'muscleGroup', 'userId', 'sets', 'reps', 'instructions']) &&
              hasRequiredFields(['id', 'name', 'dayOfWeek', 'dateAdded', 'muscleGroup', 'userId']) &&
              request.resource.data.id is string &&
              request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 100 &&
@@ -36,11 +36,13 @@ service cloud.firestore {
              request.resource.data.dateAdded is string &&
              request.resource.data.muscleGroup is string &&
              request.resource.data.userId == request.auth.uid &&
-             (!('exercises' in request.resource.data) || request.resource.data.exercises is list);
+             (!('sets' in request.resource.data) || request.resource.data.sets is number) &&
+             (!('reps' in request.resource.data) || request.resource.data.reps is number) &&
+             (!('instructions' in request.resource.data) || request.resource.data.instructions is string);
     }
 
     function isValidLog() {
-      return hasOnlyAllowedFields(['id', 'planId', 'name', 'weight', 'unit', 'reps', 'steps', 'duration', 'date', 'muscleGroup', 'userId']) &&
+      return hasOnlyAllowedFields(['id', 'planId', 'name', 'weight', 'unit', 'reps', 'steps', 'duration', 'date', 'muscleGroup', 'userId', 'caloriesBurned', 'isStrava']) &&
              hasRequiredFields(['id', 'planId', 'name', 'date', 'muscleGroup', 'userId']) &&
              request.resource.data.id is string &&
              request.resource.data.planId is string &&
@@ -52,7 +54,9 @@ service cloud.firestore {
              (!('unit' in request.resource.data) || request.resource.data.unit in ['kg', 'lbs']) &&
              (!('reps' in request.resource.data) || request.resource.data.reps is number) &&
              (!('steps' in request.resource.data) || request.resource.data.steps is number) &&
-             (!('duration' in request.resource.data) || request.resource.data.duration is number);
+             (!('duration' in request.resource.data) || request.resource.data.duration is number) &&
+             (!('caloriesBurned' in request.resource.data) || request.resource.data.caloriesBurned is number) &&
+             (!('isStrava' in request.resource.data) || request.resource.data.isStrava is bool);
     }
 
     function isValidUserProfile() {
@@ -98,10 +102,6 @@ service cloud.firestore {
       allow read: if true;
     }
 
-    match /test/connection {
-      allow read: if true;
-    }
-
     match /users/{userId} {
       allow read: if isAuthenticated();
       allow create: if isOwner(userId) && isValidUserProfile();
@@ -126,6 +126,13 @@ service cloud.firestore {
         allow update: if isOwner(userId) && isValidNutritionLog() && request.resource.data.userId == resource.data.userId;
         allow delete: if isOwner(userId);
       }
+      match /integrations/{integrationId} {
+        allow read, write: if isOwner(userId);
+      }
+      match /strava_activities/{activityId} {
+        allow read: if isOwner(userId) || isFriend(userId);
+        allow write: if isOwner(userId);
+      }
     }
 
     match /friendships/{friendshipId} {
@@ -133,6 +140,16 @@ service cloud.firestore {
       allow create: if isAuthenticated() && isValidFriendship();
       allow update: if isAuthenticated() && isValidFriendship() && (request.auth.uid == resource.data.user1 || request.auth.uid == resource.data.user2);
       allow delete: if isAuthenticated() && (request.auth.uid == resource.data.user1 || request.auth.uid == resource.data.user2);
+    }
+
+    match /pro_users/{userId} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId);
+    }
+
+    match /vip/{email} {
+      allow read: if isAuthenticated() && request.auth.token.email == email;
+      allow write: if isAuthenticated() && request.auth.token.email == email && email == 'maximheinken@gmail.com';
     }
   }
 }

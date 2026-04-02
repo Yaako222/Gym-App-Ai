@@ -268,6 +268,18 @@ export const acceptFriendRequest = async (friendshipId: string) => {
   }
 };
 
+export const declineFriendRequest = async (friendshipId: string) => {
+  if (!auth.currentUser) throw new Error('Not authenticated');
+  const path = `friendships`;
+  try {
+    await setDoc(doc(db, path, friendshipId), {
+      status: 'declined'
+    }, { merge: true });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+};
+
 export const removeFriend = async (friendshipId: string) => {
   if (!auth.currentUser) throw new Error('Not authenticated');
   const path = `friendships`;

@@ -15,7 +15,10 @@ export interface ExercisePlan {
   dayOfWeek: DayOfWeek;
   dateAdded: string;
   muscleGroup: MuscleCategory;
-  exercises?: Exercise[];
+  sets: number;
+  reps: number;
+  instructions: string;
+  userId?: string;
 }
 
 export interface ExerciseLog {
@@ -29,6 +32,9 @@ export interface ExerciseLog {
   duration?: number;
   date: string;
   muscleGroup: MuscleCategory;
+  userId?: string;
+  caloriesBurned?: number;
+  isStrava?: boolean;
 }
 
 export interface ChatMessage {
@@ -84,6 +90,6 @@ export interface Friendship {
   id: string;
   user1: string;
   user2: string;
-  status: 'pending' | 'accepted';
+  status: 'pending' | 'accepted' | 'declined';
   createdAt: string;
 }

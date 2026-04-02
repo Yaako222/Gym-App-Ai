@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Settings as SettingsIcon, Moon, Sun, Globe, User, LogOut, Check, X, Languages, Trash2, Zap } from 'lucide-react';
+import { Settings as SettingsIcon, Moon, Sun, Globe, User, LogOut, Check, X, Languages, Trash2, Zap, Star } from 'lucide-react';
 import { auth } from '../firebase';
 import { logout } from '../firebase';
 import { UserProfile } from '../types';
 import { updateUserProfile, checkUsernameAvailability, getUserProfile, deleteAccount } from '../utils/storage';
 import { useLanguage } from '../contexts/LanguageContext';
+import { usePro } from '../contexts/ProContext';
+import { ProUpgradeModal } from './ProUpgradeModal';
 
 interface SettingsProps {
   setShowOnboarding?: (show: boolean) => void;
@@ -13,6 +15,7 @@ interface SettingsProps {
 
 export default function Settings({ setShowOnboarding }: SettingsProps) {
   const { t, language, setLanguage } = useLanguage();
+  const { isPro, isVip, openProModal } = usePro();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [newUsername, setNewUsername] = useState('');
@@ -158,6 +161,35 @@ export default function Settings({ setShowOnboarding }: SettingsProps) {
 
       <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-sm space-y-8">
         
+        {/* Pro Section */}
+        <section>
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2 border-b border-white/10 pb-2">
+            <Star className="w-5 h-5 text-[#FF0050]" />
+            GymTracker PRO
+          </h3>
+          
+          <div className="bg-black/20 border border-white/5 rounded-xl p-4 flex items-center justify-between">
+            <div>
+              <div className="text-white font-medium mb-1">
+                {isPro ? 'PRO Status Active' : 'Free Plan'}
+              </div>
+              <div className="text-xs text-slate-400">
+                {isPro 
+                  ? (isVip ? 'Lifetime VIP Access' : 'You have full access to all AI features.')
+                  : 'Upgrade to PRO to unlock all AI features.'}
+              </div>
+            </div>
+            {!isPro && (
+              <button
+                onClick={openProModal}
+                className="bg-[#FF0050] hover:bg-[#e60048] text-white px-4 py-2 rounded-lg text-sm font-medium transition-all glow-pink"
+              >
+                Become PRO
+              </button>
+            )}
+          </div>
+        </section>
+
         {/* Profile Section */}
         <section>
           <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2 border-b border-white/10 pb-2">

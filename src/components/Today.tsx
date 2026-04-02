@@ -37,8 +37,29 @@ export default function Today({ plans, logs }: TodayProps) {
       setIsTodayDifferent(parsed.isTodayDifferent || false);
       setSwappedPlans(parsed.swappedPlans || {});
       setAddedPlans(parsed.addedPlans || []);
+    } else {
+      // Automatic Restday Logic
+      // If it's late in the day (e.g., after 23:00) and no logs exist for today,
+      // but there were plans, automatically mark it as a rest day.
+      const currentHour = currentDate.getHours();
+      const todaysLogsCount = logs.filter(l => formatDate(l.date) === todayDateString).length;
+      
+      const baseTodaysPlansCount = plans.filter(p => {
+        const day = p.dayOfWeek.toLowerCase();
+        const todayKey = todayNameKey.toLowerCase();
+        const mapping: Record<string, string> = {
+          'montag': 'monday', 'dienstag': 'tuesday', 'mittwoch': 'wednesday',
+          'donnerstag': 'thursday', 'freitag': 'friday', 'samstag': 'saturday', 'sonntag': 'sunday'
+        };
+        return (mapping[day] || day) === todayKey;
+      }).length;
+
+      if (currentHour >= 23 && todaysLogsCount === 0 && baseTodaysPlansCount > 0) {
+        setIsRestDay(true);
+        saveDailyState(true, false, {}, []);
+      }
     }
-  }, [todayDateString]);
+  }, [todayDateString, logs, plans, todayNameKey, currentDate]);
 
   const saveDailyState = (restDay: boolean, todayDiff: boolean, swapped: Record<string, string>, added: string[]) => {
     localStorage.setItem(`gym_daily_state_${todayDateString}`, JSON.stringify({
@@ -254,7 +275,7 @@ export default function Today({ plans, logs }: TodayProps) {
                       )}
                     </AnimatePresence>
                     
-                    <div className="flex justify-between items-start mb-4 relative z-10">
+                    <div className="flex justify-between items-start mb-2 relative z-10">
                       <h3 className="text-lg font-semibold text-white">
                         {plan.name}
                         {plan.originalId && <span className="text-xs text-[#1d7a82] ml-2 font-normal">({t('swapped')})</span>}
@@ -282,19 +303,16 @@ export default function Today({ plans, logs }: TodayProps) {
                       </div>
                     </div>
 
-                    {plan.exercises && plan.exercises.length > 0 && (
-                      <div className="mb-4 space-y-2 relative z-10">
-                        {plan.exercises.map((ex, idx) => (
-                          <div key={idx} className="bg-white/5 rounded-lg p-2 border border-white/5">
-                            <div className="flex justify-between items-center mb-1">
-                              <span className="text-xs font-bold text-white">{ex.name}</span>
-                              <span className="text-[10px] text-[#1d7a82] font-black">{ex.sets}x{ex.reps}</span>
-                            </div>
-                            <p className="text-[10px] text-slate-400 leading-tight italic">{ex.instructions}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    <div className="mb-4 relative z-10">
+                      <span className="inline-block bg-[#1d7a82]/20 text-[#1d7a82] text-xs font-bold px-2 py-1 rounded-lg mb-2">
+                        {plan.sets || 3} Sets × {plan.reps || 12} Reps
+                      </span>
+                      {plan.instructions && (
+                        <p className="text-xs text-slate-400 leading-relaxed italic border-l-2 border-white/10 pl-3">
+                          {plan.instructions}
+                        </p>
+                      )}
+                    </div>
                     
                     <div className="space-y-4 relative z-10">
                       {plan.muscleGroup === 'cardio' ? (

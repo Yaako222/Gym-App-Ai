@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Plus, Trash2 } from 'lucide-react';
-import { DayOfWeek, MuscleCategory, ExercisePlan, Exercise } from '../types';
+import { DayOfWeek, MuscleCategory, ExercisePlan } from '../types';
 import { updatePlan } from '../utils/storage';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -19,7 +19,9 @@ export default function EditExerciseModal({ isOpen, onClose, plan }: EditExercis
   const [name, setName] = useState('');
   const [dayOfWeek, setDayOfWeek] = useState<DayOfWeek>('monday');
   const [muscleGroup, setMuscleGroup] = useState<MuscleCategory>('brust');
-  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [sets, setSets] = useState(3);
+  const [reps, setReps] = useState(12);
+  const [instructions, setInstructions] = useState('');
 
   useEffect(() => {
     if (plan) {
@@ -41,23 +43,12 @@ export default function EditExerciseModal({ isOpen, onClose, plan }: EditExercis
       };
       const normalizedMuscle = muscleMapping[plan.muscleGroup.toLowerCase()] || plan.muscleGroup.toLowerCase() as MuscleCategory;
       setMuscleGroup(normalizedMuscle);
-      setExercises(plan.exercises || []);
+      
+      setSets(plan.sets || 3);
+      setReps(plan.reps || 12);
+      setInstructions(plan.instructions || '');
     }
   }, [plan]);
-
-  const handleAddExercise = () => {
-    setExercises([...exercises, { name: '', sets: 3, reps: 12, instructions: '' }]);
-  };
-
-  const handleRemoveExercise = (index: number) => {
-    setExercises(exercises.filter((_, i) => i !== index));
-  };
-
-  const handleExerciseChange = (index: number, field: keyof Exercise, value: string | number) => {
-    const newExercises = [...exercises];
-    newExercises[index] = { ...newExercises[index], [field]: value };
-    setExercises(newExercises);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,7 +58,9 @@ export default function EditExerciseModal({ isOpen, onClose, plan }: EditExercis
       name,
       dayOfWeek,
       muscleGroup,
-      exercises
+      sets,
+      reps,
+      instructions
     });
 
     onClose();
@@ -140,65 +133,33 @@ export default function EditExerciseModal({ isOpen, onClose, plan }: EditExercis
               </div>
 
               <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">{t('exercises' as any)}</h3>
-                  <button
-                    type="button"
-                    onClick={handleAddExercise}
-                    className="flex items-center gap-1 text-xs text-[#1d7a82] hover:text-[#155e63] transition-colors"
-                  >
-                    <Plus className="w-3 h-3" /> {t('addExercise' as any)}
-                  </button>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">{t('sets' as any) || 'Sets'}</label>
+                    <input
+                      type="number"
+                      value={sets}
+                      onChange={(e) => setSets(Number(e.target.value))}
+                      className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-glow-teal transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">{t('reps' as any) || 'Reps'}</label>
+                    <input
+                      type="number"
+                      value={reps}
+                      onChange={(e) => setReps(Number(e.target.value))}
+                      className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-glow-teal transition-all"
+                    />
+                  </div>
                 </div>
-
-                <div className="space-y-3">
-                  {exercises.map((ex, idx) => (
-                    <div key={idx} className="bg-black/20 border border-white/5 rounded-xl p-3 space-y-3 relative group/ex">
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveExercise(idx)}
-                        className="absolute top-2 right-2 text-slate-500 hover:text-red-400 opacity-0 group-hover/ex:opacity-100 transition-all"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                      
-                      <div className="grid grid-cols-1 gap-3">
-                        <input
-                          type="text"
-                          value={ex.name}
-                          onChange={(e) => handleExerciseChange(idx, 'name', e.target.value)}
-                          placeholder={t('exerciseName')}
-                          className="bg-transparent border-b border-white/10 text-sm text-white focus:border-[#1d7a82] outline-none py-1"
-                        />
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] text-slate-500 uppercase">{t('sets' as any)}</span>
-                            <input
-                              type="number"
-                              value={ex.sets}
-                              onChange={(e) => handleExerciseChange(idx, 'sets', Number(e.target.value))}
-                              className="w-12 bg-white/5 border border-white/10 rounded px-1 py-0.5 text-xs text-white text-center"
-                            />
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] text-slate-500 uppercase">{t('reps' as any)}</span>
-                            <input
-                              type="number"
-                              value={ex.reps}
-                              onChange={(e) => handleExerciseChange(idx, 'reps', Number(e.target.value))}
-                              className="w-12 bg-white/5 border border-white/10 rounded px-1 py-0.5 text-xs text-white text-center"
-                            />
-                          </div>
-                        </div>
-                        <textarea
-                          value={ex.instructions}
-                          onChange={(e) => handleExerciseChange(idx, 'instructions', e.target.value)}
-                          placeholder={t('instructions' as any)}
-                          className="bg-white/5 border border-white/10 rounded-lg p-2 text-[10px] text-slate-300 outline-none focus:border-[#1d7a82] h-12 resize-none"
-                        />
-                      </div>
-                    </div>
-                  ))}
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">{t('instructions' as any) || 'Instructions'}</label>
+                  <textarea
+                    value={instructions}
+                    onChange={(e) => setInstructions(e.target.value)}
+                    className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-glow-teal transition-all h-24 resize-none"
+                  />
                 </div>
               </div>
 

@@ -20,20 +20,28 @@ export default function AddExerciseModal({ isOpen, onClose, plans }: AddExercise
   const [name, setName] = useState('');
   const [dayOfWeek, setDayOfWeek] = useState<DayOfWeek>('monday');
   const [muscleGroup, setMuscleGroup] = useState<MuscleCategory>('brust');
-  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [sets, setSets] = useState(3);
+  const [reps, setReps] = useState(12);
+  const [instructions, setInstructions] = useState('');
 
   // Get unique exercises grouped by muscle category
   const groupedSavedExercises = useMemo(() => {
-    const unique = new Map<string, { name: string, muscleGroup: MuscleCategory }>();
+    const unique = new Map<string, { name: string, muscleGroup: MuscleCategory, sets: number, reps: number, instructions: string }>();
     const sortedPlans = [...plans].sort((a, b) => new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime());
     
     for (const plan of sortedPlans) {
       if (!unique.has(plan.name.toLowerCase())) {
-        unique.set(plan.name.toLowerCase(), { name: plan.name, muscleGroup: plan.muscleGroup });
+        unique.set(plan.name.toLowerCase(), { 
+          name: plan.name, 
+          muscleGroup: plan.muscleGroup,
+          sets: plan.sets || 3,
+          reps: plan.reps || 12,
+          instructions: plan.instructions || ''
+        });
       }
     }
 
-    const grouped: Record<string, { name: string, muscleGroup: MuscleCategory }[]> = {};
+    const grouped: Record<string, { name: string, muscleGroup: MuscleCategory, sets: number, reps: number, instructions: string }[]> = {};
     Array.from(unique.values()).forEach(ex => {
       if (!grouped[ex.muscleGroup]) grouped[ex.muscleGroup] = [];
       grouped[ex.muscleGroup].push(ex);
@@ -42,26 +50,13 @@ export default function AddExerciseModal({ isOpen, onClose, plans }: AddExercise
     return grouped;
   }, [plans]);
 
-  const handleSelectSaved = (exercise: { name: string, muscleGroup: MuscleCategory }) => {
+  const handleSelectSaved = (exercise: { name: string, muscleGroup: MuscleCategory, sets: number, reps: number, instructions: string }) => {
     setName(exercise.name);
     setMuscleGroup(exercise.muscleGroup);
-    // When selecting a saved exercise, we might want to pre-fill it as the first exercise in the list
-    setExercises([{ name: exercise.name, sets: 3, reps: 12, instructions: '' }]);
+    setSets(exercise.sets);
+    setReps(exercise.reps);
+    setInstructions(exercise.instructions);
     setActiveTab('new');
-  };
-
-  const handleAddExercise = () => {
-    setExercises([...exercises, { name: '', sets: 3, reps: 12, instructions: '' }]);
-  };
-
-  const handleRemoveExercise = (index: number) => {
-    setExercises(exercises.filter((_, i) => i !== index));
-  };
-
-  const handleExerciseChange = (index: number, field: keyof Exercise, value: string | number) => {
-    const newExercises = [...exercises];
-    newExercises[index] = { ...newExercises[index], [field]: value };
-    setExercises(newExercises);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -72,13 +67,17 @@ export default function AddExerciseModal({ isOpen, onClose, plans }: AddExercise
       name,
       dayOfWeek,
       muscleGroup,
-      exercises
+      sets,
+      reps,
+      instructions
     });
 
     setName('');
     setDayOfWeek('monday');
     setMuscleGroup('brust');
-    setExercises([]);
+    setSets(3);
+    setReps(12);
+    setInstructions('');
     setActiveTab('saved');
     onClose();
   };
@@ -201,67 +200,39 @@ export default function AddExerciseModal({ isOpen, onClose, plans }: AddExercise
                     </div>
                   </div>
 
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-sm font-bold text-white uppercase tracking-wider">{t('exercises' as any)}</h3>
-                      <button
-                        type="button"
-                        onClick={handleAddExercise}
-                        className="flex items-center gap-1 text-xs text-[#1d7a82] hover:text-[#155e63] transition-colors"
-                      >
-                        <Plus className="w-3 h-3" /> {t('addExercise' as any)}
-                      </button>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1">{t('sets' as any)}</label>
+                      <input
+                        type="number"
+                        min="1"
+                        required
+                        value={sets}
+                        onChange={(e) => setSets(Number(e.target.value))}
+                        className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-glow-teal transition-all"
+                      />
                     </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1">{t('reps' as any)}</label>
+                      <input
+                        type="number"
+                        min="1"
+                        required
+                        value={reps}
+                        onChange={(e) => setReps(Number(e.target.value))}
+                        className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-glow-teal transition-all"
+                      />
+                    </div>
+                  </div>
 
-                    <div className="space-y-3">
-                      {exercises.map((ex, idx) => (
-                        <div key={idx} className="bg-black/20 border border-white/5 rounded-xl p-3 space-y-3 relative group/ex">
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveExercise(idx)}
-                            className="absolute top-2 right-2 text-slate-500 hover:text-red-400 opacity-0 group-hover/ex:opacity-100 transition-all"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                          
-                          <div className="grid grid-cols-1 gap-3">
-                            <input
-                              type="text"
-                              value={ex.name}
-                              onChange={(e) => handleExerciseChange(idx, 'name', e.target.value)}
-                              placeholder={t('exerciseName')}
-                              className="bg-transparent border-b border-white/10 text-sm text-white focus:border-[#1d7a82] outline-none py-1"
-                            />
-                            <div className="grid grid-cols-2 gap-3">
-                              <div className="flex items-center gap-2">
-                                <span className="text-[10px] text-slate-500 uppercase">{t('sets' as any)}</span>
-                                <input
-                                  type="number"
-                                  value={ex.sets}
-                                  onChange={(e) => handleExerciseChange(idx, 'sets', Number(e.target.value))}
-                                  className="w-12 bg-white/5 border border-white/10 rounded px-1 py-0.5 text-xs text-white text-center"
-                                />
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-[10px] text-slate-500 uppercase">{t('reps' as any)}</span>
-                                <input
-                                  type="number"
-                                  value={ex.reps}
-                                  onChange={(e) => handleExerciseChange(idx, 'reps', Number(e.target.value))}
-                                  className="w-12 bg-white/5 border border-white/10 rounded px-1 py-0.5 text-xs text-white text-center"
-                                />
-                              </div>
-                            </div>
-                            <textarea
-                              value={ex.instructions}
-                              onChange={(e) => handleExerciseChange(idx, 'instructions', e.target.value)}
-                              placeholder={t('instructions' as any)}
-                              className="bg-white/5 border border-white/10 rounded-lg p-2 text-[10px] text-slate-300 outline-none focus:border-[#1d7a82] h-12 resize-none"
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">{t('instructions' as any)}</label>
+                    <textarea
+                      value={instructions}
+                      onChange={(e) => setInstructions(e.target.value)}
+                      placeholder={t('instructions' as any)}
+                      className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-glow-teal transition-all h-24 resize-none"
+                    />
                   </div>
 
                   <div className="pt-4 sticky bottom-0 bg-[#1e293b] pb-2">

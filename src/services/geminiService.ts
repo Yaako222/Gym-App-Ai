@@ -7,20 +7,18 @@ You are a world-class fitness coach. Your task is to generate a personalized wee
 The user provides: weight, height, age, gender, and primary fitness goal.
 
 Your output must be a JSON array of ExercisePlan objects.
-Each ExercisePlan represents a workout day in the gym.
-A typical week should have 3-5 workout days.
+CRITICAL: Each ExercisePlan object represents exactly ONE SINGLE EXERCISE, not a full workout day.
+If a user should do 5 exercises on Monday, you must generate 5 separate ExercisePlan objects, all with dayOfWeek: "monday".
 
 Each ExercisePlan needs:
-- name: A catchy name for the workout (e.g. "Upper Body Power", "Fat Burn Cardio")
+- name: The name of the specific exercise (e.g., "Bench Press", "Squat", "Bicep Curls")
 - dayOfWeek: One of 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'
 - muscleGroup: One of 'arme', 'beine', 'brust', 'rücken', 'schultern', 'bauch', 'ganzkörper', 'cardio', 'andere'
-- exercises: An array of objects with:
-  - name: Exercise name
-  - sets: Number of sets
-  - reps: Number of repetitions
-  - instructions: A very simple, child-friendly instruction on how to perform the exercise.
+- sets: Number of sets (integer)
+- reps: Number of repetitions (integer)
+- instructions: A very simple, child-friendly instruction on how to perform the exercise.
 
-Be specific and realistic based on the user's goal (Muscle Build, Weight Loss, Endurance).
+Be specific and realistic based on the user's goal (Muscle Build, Weight Loss, Endurance). Generate a full week's plan consisting of multiple exercises per active day.
 `;
 
 export async function generateTrainingPlan(userData: {
@@ -60,21 +58,11 @@ export async function generateTrainingPlan(userData: {
                 name: { type: Type.STRING },
                 dayOfWeek: { type: Type.STRING },
                 muscleGroup: { type: Type.STRING },
-                exercises: {
-                  type: Type.ARRAY,
-                  items: {
-                    type: Type.OBJECT,
-                    properties: {
-                      name: { type: Type.STRING },
-                      sets: { type: Type.INTEGER },
-                      reps: { type: Type.INTEGER },
-                      instructions: { type: Type.STRING },
-                    },
-                    required: ["name", "sets", "reps", "instructions"],
-                  },
-                },
+                sets: { type: Type.INTEGER },
+                reps: { type: Type.INTEGER },
+                instructions: { type: Type.STRING },
               },
-              required: ["name", "dayOfWeek", "muscleGroup", "exercises"],
+              required: ["name", "dayOfWeek", "muscleGroup", "sets", "reps", "instructions"],
             },
           },
         },

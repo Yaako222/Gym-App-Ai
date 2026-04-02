@@ -5,6 +5,8 @@ import { ExerciseLog, NutritionLog } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getCurrentDate, formatDate } from '../utils/time';
 
+import StravaActivities from './StravaActivities';
+
 interface DashboardProps {
   exerciseLogs: ExerciseLog[];
   nutritionLogs: NutritionLog[];
@@ -18,11 +20,14 @@ export default function Dashboard({ exerciseLogs, nutritionLogs }: DashboardProp
   const todayExercises = exerciseLogs.filter(log => log.date.startsWith(todayStr));
   const todayNutrition = nutritionLogs.filter(log => log.date.startsWith(todayStr));
 
-  const totalCalories = todayNutrition.reduce((sum, log) => sum + log.totalCalories, 0);
+  const totalCaloriesIn = todayNutrition.reduce((sum, log) => sum + log.totalCalories, 0);
   const totalProtein = todayNutrition.reduce((sum, log) => sum + log.totalProtein, 0);
   const totalCarbs = todayNutrition.reduce((sum, log) => sum + log.totalCarbs, 0);
   const totalFat = todayNutrition.reduce((sum, log) => sum + log.totalFat, 0);
-  const totalWater = todayNutrition.reduce((sum, log) => sum + log.waterIntakeMl, 0);
+  const totalWater = todayNutrition.reduce((sum, log) => sum + (log.waterIntakeMl || 0), 0);
+  
+  const totalCaloriesBurned = todayExercises.reduce((sum, log) => sum + (log.caloriesBurned || 0), 0);
+  const netCalories = totalCaloriesIn - totalCaloriesBurned;
 
   const hasActivity = todayExercises.length > 0 || todayNutrition.length > 0;
 
@@ -50,11 +55,11 @@ export default function Dashboard({ exerciseLogs, nutritionLogs }: DashboardProp
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Nutrition Summary */}
           <div className="lg:col-span-2 space-y-6">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
               <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm group hover:border-[#FF0050]/50 transition-all">
-                <div className="text-slate-400 text-xs mb-1 group-hover:text-white transition-colors">{t('calories')}</div>
-                <div className="text-2xl font-bold text-white text-glow-pink">{Math.round(totalCalories)}</div>
-                <div className="text-[10px] text-slate-500 mt-1">kcal</div>
+                <div className="text-slate-400 text-xs mb-1 group-hover:text-white transition-colors">Net Kcal</div>
+                <div className="text-2xl font-bold text-white text-glow-pink">{Math.round(netCalories)}</div>
+                <div className="text-[10px] text-slate-500 mt-1">In: {Math.round(totalCaloriesIn)} | Out: {Math.round(totalCaloriesBurned)}</div>
               </div>
               <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm group hover:border-[#1d7a82]/50 transition-all">
                 <div className="text-slate-400 text-xs mb-1 group-hover:text-white transition-colors">{t('protein')}</div>
@@ -68,35 +73,10 @@ export default function Dashboard({ exerciseLogs, nutritionLogs }: DashboardProp
                 <div className="text-slate-400 text-xs mb-1 group-hover:text-white transition-colors">{t('fat')}</div>
                 <div className="text-2xl font-bold text-white group-hover:text-emerald-400 transition-colors">{Math.round(totalFat)}g</div>
               </div>
-            </div>
-
-            <div className="bg-white/5 border border-white/10 rounded-3xl p-6 backdrop-blur-sm">
-              <div className="flex items-center gap-2 mb-6">
-                <Utensils className="w-5 h-5 text-[#FF0050]" />
-                <h2 className="text-lg font-semibold text-white">{t('recentMeals')}</h2>
-              </div>
-              <div className="space-y-3">
-                {todayNutrition.length === 0 ? (
-                  <p className="text-slate-500 text-sm italic">{t('noLogs')}</p>
-                ) : (
-                  todayNutrition.map(log => (
-                    <div key={log.id} className="flex items-center justify-between p-4 bg-black/20 rounded-2xl border border-white/5">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-[#FF0050]/10 flex items-center justify-center text-[#FF0050]">
-                          <Utensils className="w-6 h-6" />
-                        </div>
-                        <div>
-                          <div className="text-white font-medium capitalize">{t(log.mealType as any)}</div>
-                          <div className="text-xs text-slate-400">{log.foodItems.map(f => f.name).join(', ')}</div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-white font-bold">{Math.round(log.totalCalories)} kcal</div>
-                        <div className="text-[10px] text-slate-500">{Math.round(log.totalProtein)}P · {Math.round(log.totalCarbs)}C · {Math.round(log.totalFat)}F</div>
-                      </div>
-                    </div>
-                  ))
-                )}
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm group hover:border-[#fc4c02]/50 transition-all">
+                <div className="text-slate-400 text-xs mb-1 group-hover:text-white transition-colors">Burned</div>
+                <div className="text-2xl font-bold text-white group-hover:text-[#fc4c02] transition-colors">{Math.round(totalCaloriesBurned)}</div>
+                <div className="text-[10px] text-slate-500 mt-1">kcal</div>
               </div>
             </div>
           </div>
@@ -145,6 +125,9 @@ export default function Dashboard({ exerciseLogs, nutritionLogs }: DashboardProp
           </div>
         </div>
       )}
+
+      {/* Strava Integration */}
+      <StravaActivities />
     </div>
   );
 }
