@@ -62,6 +62,7 @@ export const ProUpgradeModal = ({ isOpen, onClose }: { isOpen: boolean; onClose:
   const [isVerifying, setIsVerifying] = useState(false);
   const [isDirectLinkOpen, setIsDirectLinkOpen] = useState(false);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [verifyError, setVerifyError] = useState<string | null>(null);
 
   const STRIPE_LINKS = {
     monthly: 'https://buy.stripe.com/test_6oU5kC0vF5Vk5uJfpmdjO01',
@@ -69,11 +70,15 @@ export const ProUpgradeModal = ({ isOpen, onClose }: { isOpen: boolean; onClose:
   };
 
   useEffect(() => {
-    if (isOpen && !isPro && !isDirectLinkOpen) {
+    if (isOpen && !isPro && !isDirectLinkOpen && auth.currentUser) {
       fetch('/api/create-payment-intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cycle: billingCycle })
+        body: JSON.stringify({ 
+          cycle: billingCycle,
+          email: auth.currentUser.email,
+          userId: auth.currentUser.uid
+        })
       })
         .then((res) => {
           if (!res.ok) throw new Error('Failed to fetch payment intent');
@@ -90,12 +95,30 @@ export const ProUpgradeModal = ({ isOpen, onClose }: { isOpen: boolean; onClose:
   };
 
   const handleVerify = async () => {
+    if (!auth.currentUser) return;
     setIsVerifying(true);
+    setVerifyError(null);
     try {
-      await upgradeToPro();
-      onClose();
+      const response = await fetch('/api/verify-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: auth.currentUser.email,
+          userId: auth.currentUser.uid
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        await upgradeToPro();
+        onClose();
+      } else {
+        setVerifyError(data.message || 'No payment found. Please try again after completing the checkout.');
+      }
     } catch (error) {
       console.error('Verification failed:', error);
+      setVerifyError('An error occurred during verification. Please try again.');
     } finally {
       setIsVerifying(false);
     }
@@ -246,6 +269,12 @@ export const ProUpgradeModal = ({ isOpen, onClose }: { isOpen: boolean; onClose:
                   >
                     {isVerifying ? 'Verifying...' : 'I already paid (Verify)'}
                   </button>
+
+                  {verifyError && (
+                    <p className="text-red-400 text-xs text-center mt-2 bg-red-400/10 p-2 rounded-lg border border-red-400/20">
+                      {verifyError}
+                    </p>
+                  )}
 
                   <button
                     onClick={() => setIsDirectLinkOpen(false)}

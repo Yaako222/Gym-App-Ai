@@ -20,18 +20,66 @@ async function startServer() {
 
   app.post("/api/create-payment-intent", async (req, res) => {
     try {
-      const { cycle } = req.body;
+      const { cycle, email, userId } = req.body;
       const amount = cycle === 'yearly' ? 4000 : 399; // 40.00 EUR vs 3.99 EUR
       
       const paymentIntent = await stripe.paymentIntents.create({
         amount,
         currency: 'eur',
         automatic_payment_methods: { enabled: true },
-        metadata: { cycle: cycle || 'monthly' }
+        metadata: { 
+          cycle: cycle || 'monthly',
+          email: email || 'unknown',
+          userId: userId || 'unknown'
+        },
+        receipt_email: email
       });
       res.json({ clientSecret: paymentIntent.client_secret });
     } catch (e: any) {
       res.status(400).json({ error: e.message });
+    }
+  });
+
+  app.post("/api/verify-payment", async (req, res) => {
+    const { email, userId } = req.body;
+    if (!email) return res.status(400).json({ error: "Email required" });
+
+    try {
+      // 1. Check Checkout Sessions (for Direct Links)
+      const sessions = await stripe.checkout.sessions.list({
+        limit: 20,
+      });
+
+      const successfulSession = sessions.data.find(session => 
+        (session.customer_details?.email?.toLowerCase() === email.toLowerCase() || 
+         session.metadata?.userId === userId) && 
+        session.payment_status === 'paid'
+      );
+
+      if (successfulSession) {
+        return res.json({ success: true, method: 'checkout_session' });
+      }
+
+      // 2. Check Payment Intents (for Embedded Form)
+      const paymentIntents = await stripe.paymentIntents.list({
+        limit: 20,
+      });
+      
+      const successfulPI = paymentIntents.data.find(pi => 
+        (pi.metadata?.email?.toLowerCase() === email.toLowerCase() || 
+         pi.metadata?.userId === userId ||
+         pi.receipt_email?.toLowerCase() === email.toLowerCase()) && 
+        pi.status === 'succeeded'
+      );
+
+      if (successfulPI) {
+        return res.json({ success: true, method: 'payment_intent' });
+      }
+
+      res.json({ success: false, message: "No successful payment found for this account." });
+    } catch (e: any) {
+      console.error('Verification error:', e);
+      res.status(500).json({ error: e.message });
     }
   });
 

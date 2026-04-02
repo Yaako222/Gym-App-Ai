@@ -30,7 +30,7 @@ const VIP_UIDS = [
 ];
 
 const VIP_EMAILS = [
-  
+  'maximheinken@gmail.com'
 ];
 
 export const ProProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
