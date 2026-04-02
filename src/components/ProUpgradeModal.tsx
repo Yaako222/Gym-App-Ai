@@ -5,6 +5,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { usePro } from '../contexts/ProContext';
+import { auth } from '../firebase';
 
 const stripePromise = loadStripe('pk_test_51THVGkAmEkKGLsAUYIhL8dqgiNhdDcEFRBN53Zy9xvxENvuj93tukr2ZESlesctgNuWm4Bbg3RGfGdI8R1WzGKnC00WPupVTKc');
 

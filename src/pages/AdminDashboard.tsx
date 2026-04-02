@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, getDocs, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, deleteDoc, doc, setDoc } from 'firebase/firestore';
 import { VIP_EMAILS, PRO_EMAILS } from '../constants/userPermissions';
 import { motion, AnimatePresence } from 'motion/react';
-import { Users, Crown, CreditCard, ShieldCheck, Search, Mail, Calendar, Trash2, AlertTriangle } from 'lucide-react';
+import { Users, Crown, CreditCard, ShieldCheck, Search, Mail, Calendar, Trash2, AlertTriangle, UserPlus } from 'lucide-react';
 
 interface UserEntry {
   email: string;
@@ -19,6 +19,9 @@ export const AdminDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isRevoking, setIsRevoking] = useState<string | null>(null);
+  const [isAdding, setIsAdding] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [newType, setNewType] = useState<'vip' | 'pro_users'>('pro_users');
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -67,6 +70,36 @@ export const AdminDashboard: React.FC = () => {
     fetchUsers();
   }, []);
 
+  const handleGrant = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newEmail) return;
+    setIsAdding(true);
+    try {
+      if (newType === 'vip') {
+        await setDoc(doc(db, 'vip', newEmail), {
+          email: newEmail,
+          active: true,
+          createdAt: new Date().toISOString()
+        });
+      } else {
+        // For PRO, we store by email if we don't have UID
+        await setDoc(doc(db, 'pro_users', newEmail), {
+          email: newEmail,
+          active: true,
+          createdAt: new Date().toISOString(),
+          manualGrant: true
+        });
+      }
+      setNewEmail('');
+      await fetchUsers();
+    } catch (error) {
+      console.error('Error granting status:', error);
+      alert('Failed to grant status.');
+    } finally {
+      setIsAdding(false);
+    }
+  };
+
   const handleRevoke = async (user: UserEntry) => {
     if (user.source === 'Hardcoded') {
       alert('This user is hardcoded in the source code. To remove them, you must edit the "userPermissions.ts" file.');
@@ -77,8 +110,8 @@ export const AdminDashboard: React.FC = () => {
 
     setIsRevoking(user.email);
     try {
-      // For VIP, the ID is the email. For PRO, the ID is the UID.
-      const docId = user.collection === 'vip' ? user.email : user.uid;
+      // For VIP, the ID is the email. For PRO, the ID is the UID or email.
+      const docId = user.collection === 'vip' ? user.email : (user.uid || user.email);
       if (docId) {
         await deleteDoc(doc(db, user.collection, docId));
         await fetchUsers(); // Refresh the list
@@ -103,7 +136,7 @@ export const AdminDashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0A0B] text-white p-6 md:p-12">
+    <div className="min-h-screen bg-[#0A0A0B] text-white p-6 md:p-12 pb-32">
       <div className="max-w-6xl mx-auto">
         <header className="mb-12 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
@@ -114,17 +147,73 @@ export const AdminDashboard: React.FC = () => {
             <p className="text-slate-400 font-medium">Manage your VIP and PRO community</p>
           </div>
 
-          <div className="relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-[#FF0050] transition-colors" />
-            <input
-              type="text"
-              placeholder="Search by email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded-2xl py-3 pl-12 pr-6 w-full md:w-80 focus:outline-none focus:ring-2 focus:ring-[#FF0050]/50 transition-all"
-            />
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative group">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-[#FF0050] transition-colors" />
+              <input
+                type="text"
+                placeholder="Search by email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="bg-white/5 border border-white/10 rounded-2xl py-3 pl-12 pr-6 w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-[#FF0050]/50 transition-all"
+              />
+            </div>
           </div>
         </header>
+
+        {/* GRANT STATUS FORM */}
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white/5 rounded-[32px] border border-white/10 p-8 mb-12"
+        >
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-[#1d7a82]/20 flex items-center justify-center">
+              <UserPlus className="text-[#1d7a82] w-6 h-6" />
+            </div>
+            <h2 className="font-bold text-xl">Grant Status</h2>
+          </div>
+
+          <form onSubmit={handleGrant} className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <input
+                type="email"
+                placeholder="Enter user email..."
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                required
+                className="w-full bg-black/20 border border-white/10 rounded-xl py-3 px-4 focus:outline-none focus:border-[#1d7a82] transition-all"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setNewType('pro_users')}
+                className={`px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all ${
+                  newType === 'pro_users' ? 'bg-[#FF0050] text-white' : 'bg-white/5 text-slate-400 hover:bg-white/10'
+                }`}
+              >
+                PRO
+              </button>
+              <button
+                type="button"
+                onClick={() => setNewType('vip')}
+                className={`px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all ${
+                  newType === 'vip' ? 'bg-amber-500 text-white' : 'bg-white/5 text-slate-400 hover:bg-white/10'
+                }`}
+              >
+                VIP
+              </button>
+            </div>
+            <button
+              type="submit"
+              disabled={isAdding}
+              className="bg-[#1d7a82] hover:bg-[#155e63] text-white px-8 py-3 rounded-xl font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {isAdding ? 'Granting...' : 'Grant Status'}
+            </button>
+          </form>
+        </motion.section>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* VIP LIST */}
