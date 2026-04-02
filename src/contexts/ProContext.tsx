@@ -73,8 +73,15 @@ export const ProProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           // 4. Check Pro status from Firestore (by UID)
           if (!isProUser) {
             const proDoc = await getDoc(doc(db, 'pro_users', user.uid));
-            if (proDoc.exists() && proDoc.data().active) {
-              isProUser = true;
+            if (proDoc.exists()) {
+              const data = proDoc.data();
+              // TEMPORARY CLEANUP: Deactivate status for specific email if it was "cheated"
+              if (user.email === 'maximhh.brduer@gmail.com' && data.active) {
+                await setDoc(doc(db, 'pro_users', user.uid), { active: false }, { merge: true });
+                isProUser = false;
+              } else if (data.active) {
+                isProUser = true;
+              }
             }
           }
 
