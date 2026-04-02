@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { auth, db } from '../firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { VIP_UIDS, VIP_EMAILS, PRO_EMAILS } from '../constants/userPermissions';
 
 interface ProContextType {
   isPro: boolean;
@@ -23,15 +24,6 @@ const ProContext = createContext<ProContextType>({
 });
 
 export const usePro = () => useContext(ProContext);
-
-const VIP_UIDS = [
-  'ATEdZ9dMImYbBJNhhahSDiw8zj23',
-  'KHBqHNHyHoSj8GAgrJ7enfEiKRe2'
-];
-
-const VIP_EMAILS = [
-  'maximheinken@gmail.com'
-];
 
 export const ProProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isPro, setIsPro] = useState(false);
@@ -61,6 +53,17 @@ export const ProProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             await setDoc(doc(db, 'vip', user.email), { active: true, email: user.email }, { merge: true });
           }
 
+          // 2.5 Check hardcoded PRO Emails
+          if (user.email && !isProUser && PRO_EMAILS.includes(user.email)) {
+            isProUser = true;
+            // Bootstrap Firestore record
+            await setDoc(doc(db, 'pro_users', user.uid), { 
+              active: true, 
+              createdAt: new Date().toISOString(),
+              email: user.email 
+            }, { merge: true });
+          }
+
           // 3. Check VIP status from Firestore (by email)
           if (user.email && !isVipUser) {
             const vipDoc = await getDoc(doc(db, 'vip', user.email));
@@ -76,7 +79,8 @@ export const ProProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             if (proDoc.exists()) {
               const data = proDoc.data();
               // TEMPORARY CLEANUP: Deactivate status for specific email if it was "cheated"
-              if (user.email === 'maximhh.brduer@gmail.com' && data.active) {
+              const cheatedEmails = ['maximhh.brduer@gmail.com', 'maximhh.bruder@gmail.com'];
+              if (user.email && cheatedEmails.includes(user.email) && data.active) {
                 await setDoc(doc(db, 'pro_users', user.uid), { active: false }, { merge: true });
                 isProUser = false;
               } else if (data.active) {

@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Dumbbell, Plus, Search, Sun, Calendar, BarChart2, MessageSquare, Gift, LogOut, Users, Settings as SettingsIcon, Database, Menu, X, Utensils, History as HistoryIcon, Activity } from 'lucide-react';
+import { Dumbbell, Plus, Search, Sun, Calendar, BarChart2, MessageSquare, Gift, LogOut, Users, Settings as SettingsIcon, Database, Menu, X, Utensils, History as HistoryIcon, Activity, ShieldCheck } from 'lucide-react';
 import { NutritionTracker } from './components/NutritionTracker';
 import Dashboard from './components/Dashboard';
 import WeeklyPlan from './components/WeeklyPlan';
@@ -18,6 +18,7 @@ import History from './components/History';
 import Library from './components/Library';
 import { Friends } from './components/Friends';
 import Settings from './components/Settings';
+import { AdminDashboard } from './pages/AdminDashboard';
 import { UsernameModal } from './components/UsernameModal';
 import { OnboardingAnimation } from './components/OnboardingAnimation';
 import { DataCollectionModal, UserData } from './components/DataCollectionModal';
@@ -38,7 +39,7 @@ import { ProUpgradeModal } from './components/ProUpgradeModal';
 function App() {
   const { t, language } = useLanguage();
   const { isProModalOpen, closeProModal } = usePro();
-  const [activeTab, setActiveTab] = useState<'today' | 'dashboard' | 'weeklyPlan' | 'analytics' | 'history' | 'library' | 'friends' | 'chat' | 'wrapped' | 'settings' | 'nutrition'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'today' | 'dashboard' | 'weeklyPlan' | 'analytics' | 'history' | 'library' | 'friends' | 'chat' | 'wrapped' | 'settings' | 'nutrition' | 'admin'>('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -310,6 +311,15 @@ function App() {
             onClick={() => setActiveTab('wrapped')} 
             collapsed={isSidebarCollapsed}
           />
+          {user?.email === 'maximheinken@gmail.com' && (
+            <SidebarItem 
+              icon={<ShieldCheck className="w-5 h-5 text-[#FF0050]" />} 
+              label="Admin" 
+              active={activeTab === 'admin'} 
+              onClick={() => setActiveTab('admin')} 
+              collapsed={isSidebarCollapsed}
+            />
+          )}
         </nav>
 
         <div className="p-4 border-t border-white/5 space-y-2">
@@ -491,6 +501,17 @@ function App() {
               transition={{ duration: 0.2 }}
             >
               <Settings setShowOnboarding={setShowOnboarding} />
+            </motion.div>
+          )}
+          {activeTab === 'admin' && user?.email === 'maximheinken@gmail.com' && (
+            <motion.div
+              key="admin"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+            >
+              <AdminDashboard />
             </motion.div>
           )}
         </AnimatePresence>
