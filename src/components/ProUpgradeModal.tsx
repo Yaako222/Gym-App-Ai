@@ -1,125 +1,75 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Check, Star, Shield, Zap } from 'lucide-react';
+import { X, Star, Shield, Zap, Users } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { loadStripe } from '@stripe/stripe-js';
-import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { usePro } from '../contexts/ProContext';
-import { auth } from '../firebase';
-
-const stripePromise = loadStripe('pk_test_51THVGkAmEkKGLsAUYIhL8dqgiNhdDcEFRBN53Zy9xvxENvuj93tukr2ZESlesctgNuWm4Bbg3RGfGdI8R1WzGKnC00WPupVTKc');
-
-const CheckoutForm = ({ onSuccess }: { onSuccess: () => void }) => {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [error, setError] = useState<string | null>(null);
-  const [processing, setProcessing] = useState(false);
-  const { t } = useLanguage();
-
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-
-    if (!stripe || !elements) {
-      return;
-    }
-
-    setProcessing(true);
-
-    const { error: submitError } = await stripe.confirmPayment({
-      elements,
-      confirmParams: {
-        return_url: window.location.origin,
-      },
-      redirect: 'if_required',
-    });
-
-    if (submitError) {
-      setError(submitError.message || 'An error occurred');
-      setProcessing(false);
-    } else {
-      onSuccess();
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <PaymentElement />
-      {error && <div className="text-red-400 text-sm mt-2">{error}</div>}
-      <button
-        type="submit"
-        disabled={!stripe || processing}
-        className="w-full bg-[#FF0050] hover:bg-[#e60048] text-white py-3 rounded-xl font-medium transition-all glow-pink disabled:opacity-50 mt-4"
-      >
-        {processing ? t('processing' as any) : t('payNow' as any)}
-      </button>
-    </form>
-  );
-};
+import { auth, db } from '../firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 export const ProUpgradeModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
   const { t } = useLanguage();
   const { upgradeToPro, isPro } = usePro();
-  const [clientSecret, setClientSecret] = useState('');
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('yearly');
+  const [planType, setPlanType] = useState<'individual' | 'family'>('individual');
   const [isVerifying, setIsVerifying] = useState(false);
-  const [isDirectLinkOpen, setIsDirectLinkOpen] = useState(false);
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
-  const [verifyError, setVerifyError] = useState<string | null>(null);
-
-  const STRIPE_LINKS = {
-    monthly: 'https://buy.stripe.com/test_6oU5kC0vF5Vk5uJfpmdjO01',
-    yearly: 'https://buy.stripe.com/test_fZudR8dir97w3mBcdadjO00'
-  };
+  const [verifyMessage, setVerifyMessage] = useState<{type: 'error'|'success', text: string} | null>(null);
 
   useEffect(() => {
-    if (isOpen && !isPro && !isDirectLinkOpen && auth.currentUser) {
-      fetch('/api/create-payment-intent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          cycle: billingCycle,
-          email: auth.currentUser.email,
-          userId: auth.currentUser.uid
-        })
-      })
-        .then((res) => {
-          if (!res.ok) throw new Error('Failed to fetch payment intent');
-          return res.json();
-        })
-        .then((data) => setClientSecret(data.clientSecret))
-        .catch((err) => console.error('Error fetching client secret:', err));
-    }
-  }, [isOpen, isPro, isDirectLinkOpen, billingCycle]);
+    if (isOpen) {
+      const script = document.createElement('script');
+      script.src = 'https://assets.lemonsqueezy.com/lemon.js';
+      script.defer = true;
+      document.body.appendChild(script);
 
-  const handleSuccess = async () => {
-    await upgradeToPro();
-    onClose();
+      script.onload = () => {
+        if ((window as any).createLemonSqueezy) {
+          (window as any).createLemonSqueezy();
+        }
+      };
+
+      return () => {
+        if (document.body.contains(script)) {
+          document.body.removeChild(script);
+        }
+      };
+    }
+  }, [isOpen]);
+
+  const getCheckoutLink = () => {
+    if (billingCycle === 'monthly' && planType === 'individual') return 'https://gymllc.lemonsqueezy.com/checkout/buy/89b9f08b-5ed7-4b51-8188-656ab12137d1?embed=1';
+    if (billingCycle === 'monthly' && planType === 'family') return 'https://gymllc.lemonsqueezy.com/checkout/buy/1491df13-d11d-4531-89c9-f3e69d011a33?embed=1';
+    if (billingCycle === 'yearly' && planType === 'individual') return 'https://gymllc.lemonsqueezy.com/checkout/buy/0b47081d-7764-4058-8b58-525c07c6c226?embed=1';
+    if (billingCycle === 'yearly' && planType === 'family') return 'https://gymllc.lemonsqueezy.com/checkout/buy/febbbd28-1a08-41fe-ad64-84d71293a512?embed=1';
+    return '#';
+  };
+
+  const getPriceDisplay = () => {
+    if (billingCycle === 'monthly' && planType === 'individual') return '€2.67/month';
+    if (billingCycle === 'monthly' && planType === 'family') return '€10.67/month';
+    if (billingCycle === 'yearly' && planType === 'individual') return '€35.67/year';
+    if (billingCycle === 'yearly' && planType === 'family') return '€100.00/year';
+    return '';
   };
 
   const handleVerify = async () => {
     if (!auth.currentUser) return;
     setIsVerifying(true);
-    setVerifyError(null);
+    setVerifyMessage(null);
     try {
-      const response = await fetch('/api/verify-payment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          email: auth.currentUser.email,
-          userId: auth.currentUser.uid
-        })
-      });
+      // Check if admin has manually granted access
+      const proDocUid = await getDoc(doc(db, 'pro_users', auth.currentUser.uid));
+      const proDocEmail = await getDoc(doc(db, 'pro_users', auth.currentUser.email || ''));
       
-      const data = await response.json();
-      
-      if (data.success) {
-        await upgradeToPro();
-        onClose();
+      if ((proDocUid.exists() && proDocUid.data().active) || (proDocEmail.exists() && proDocEmail.data().active)) {
+        await upgradeToPro(planType);
+        setVerifyMessage({ type: 'success', text: 'Payment verified! Welcome to PRO.' });
+        setTimeout(() => onClose(), 2000);
       } else {
-        setVerifyError(data.message || 'No payment found. Please try again after completing the checkout.');
+        setVerifyMessage({ type: 'error', text: 'No active subscription found. If you just paid, please wait a moment or contact support.' });
       }
     } catch (error) {
       console.error('Verification failed:', error);
-      setVerifyError('An error occurred during verification. Please try again.');
+      setVerifyMessage({ type: 'error', text: 'An error occurred during verification.' });
     } finally {
       setIsVerifying(false);
     }
@@ -159,8 +109,8 @@ export const ProUpgradeModal = ({ isOpen, onClose }: { isOpen: boolean; onClose:
               <p className="text-slate-400 text-sm mt-1">Unlock the full power of AI</p>
             </div>
 
-            {/* Plan Toggle */}
-            <div className="bg-black/20 p-1 rounded-2xl border border-white/5 flex mb-6">
+            {/* Billing Cycle Toggle */}
+            <div className="bg-black/20 p-1 rounded-2xl border border-white/5 flex mb-3">
               <button
                 onClick={() => setBillingCycle('monthly')}
                 className={`flex-1 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${
@@ -168,7 +118,6 @@ export const ProUpgradeModal = ({ isOpen, onClose }: { isOpen: boolean; onClose:
                 }`}
               >
                 Monthly
-                <div className="text-[10px] opacity-70">3.99€</div>
               </button>
               <button
                 onClick={() => setBillingCycle('yearly')}
@@ -177,21 +126,32 @@ export const ProUpgradeModal = ({ isOpen, onClose }: { isOpen: boolean; onClose:
                 }`}
               >
                 Yearly
-                <div className="text-[10px] opacity-70">40.00€</div>
                 <span className="absolute -top-2 -right-2 bg-[#1d7a82] text-[8px] px-1.5 py-0.5 rounded-full text-white animate-pulse">
-                  SAVE
+                  1 MONTH FREE
                 </span>
               </button>
             </div>
 
-            {billingCycle === 'yearly' && (
-              <div className="bg-[#1d7a82]/10 border border-[#1d7a82]/30 rounded-2xl p-3 mb-6 flex items-center gap-3">
-                <Zap className="w-5 h-5 text-[#1d7a82]" />
-                <p className="text-xs text-[#1d7a82] font-bold uppercase tracking-wider">
-                  30 Days Free Trial Included!
-                </p>
-              </div>
-            )}
+            {/* Plan Type Toggle */}
+            <div className="bg-black/20 p-1 rounded-2xl border border-white/5 flex mb-6">
+              <button
+                onClick={() => setPlanType('individual')}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${
+                  planType === 'individual' ? 'bg-white/10 text-white' : 'text-slate-500 hover:text-slate-300'
+                }`}
+              >
+                Individual
+              </button>
+              <button
+                onClick={() => setPlanType('family')}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${
+                  planType === 'family' ? 'bg-white/10 text-white' : 'text-slate-500 hover:text-slate-300'
+                }`}
+              >
+                <Users className="w-3 h-3" />
+                Family
+              </button>
+            </div>
 
             <div className="space-y-4 mb-8">
               <div className="flex items-start gap-3">
@@ -224,66 +184,28 @@ export const ProUpgradeModal = ({ isOpen, onClose }: { isOpen: boolean; onClose:
             </div>
 
             <div className="space-y-4">
-              {!isDirectLinkOpen ? (
-                <>
-                  {clientSecret ? (
-                    <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
-                      <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'night' } }}>
-                        <CheckoutForm onSuccess={handleSuccess} />
-                      </Elements>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-slate-400">Loading payment options...</div>
-                  )}
+              <a
+                href={getCheckoutLink()}
+                className="lemonsqueezy-button w-full flex flex-col items-center justify-center gap-1 bg-[#FF0050] hover:bg-[#e60048] text-white py-3 rounded-xl font-medium transition-all glow-pink"
+              >
+                <span>Buy GymTracker PRO</span>
+                <span className="text-xs font-bold opacity-90">{getPriceDisplay()}</span>
+              </a>
 
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-white/10"></div>
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-[#1e293b] px-2 text-slate-500">Or</span>
-                    </div>
-                  </div>
+              <button
+                onClick={handleVerify}
+                disabled={isVerifying}
+                className="w-full flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white py-3 rounded-xl font-medium transition-all border border-white/10"
+              >
+                {isVerifying ? 'Verifying...' : 'I already paid (Verify)'}
+              </button>
 
-                  <button
-                    onClick={() => setIsDirectLinkOpen(true)}
-                    className="w-full flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white py-3 rounded-xl font-medium transition-all border border-white/10"
-                  >
-                    Pay via Direct Link
-                  </button>
-                </>
-              ) : (
-                <div className="space-y-4">
-                  <a
-                    href={STRIPE_LINKS[billingCycle]}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full flex items-center justify-center gap-2 bg-[#FF0050] hover:bg-[#e60048] text-white py-3 rounded-xl font-medium transition-all glow-pink"
-                  >
-                    Open Stripe Checkout ({billingCycle})
-                  </a>
-
-                  <button
-                    onClick={handleVerify}
-                    disabled={isVerifying}
-                    className="w-full flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white py-3 rounded-xl font-medium transition-all border border-white/10"
-                  >
-                    {isVerifying ? 'Verifying...' : 'I already paid (Verify)'}
-                  </button>
-
-                  {verifyError && (
-                    <p className="text-red-400 text-xs text-center mt-2 bg-red-400/10 p-2 rounded-lg border border-red-400/20">
-                      {verifyError}
-                    </p>
-                  )}
-
-                  <button
-                    onClick={() => setIsDirectLinkOpen(false)}
-                    className="w-full text-xs text-slate-500 hover:text-white transition-colors"
-                  >
-                    Back to Card Payment
-                  </button>
-                </div>
+              {verifyMessage && (
+                <p className={`text-xs text-center mt-2 p-2 rounded-lg border ${
+                  verifyMessage.type === 'success' ? 'text-green-400 bg-green-400/10 border-green-400/20' : 'text-red-400 bg-red-400/10 border-red-400/20'
+                }`}>
+                  {verifyMessage.text}
+                </p>
               )}
             </div>
           </motion.div>

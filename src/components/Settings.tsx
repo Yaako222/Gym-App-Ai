@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Settings as SettingsIcon, Moon, Sun, Globe, User, LogOut, Check, X, Languages, Trash2, Zap, Star } from 'lucide-react';
-import { auth } from '../firebase';
+import { Settings as SettingsIcon, Moon, Sun, Globe, User, LogOut, Check, X, Languages, Trash2, Zap, Star, Users, Plus } from 'lucide-react';
+import { auth, db } from '../firebase';
 import { logout } from '../firebase';
 import { UserProfile } from '../types';
 import { updateUserProfile, checkUsernameAvailability, getUserProfile, deleteAccount } from '../utils/storage';
 import { useLanguage } from '../contexts/LanguageContext';
 import { usePro } from '../contexts/ProContext';
 import { ProUpgradeModal } from './ProUpgradeModal';
+import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 
 interface SettingsProps {
   setShowOnboarding?: (show: boolean) => void;
@@ -15,7 +16,7 @@ interface SettingsProps {
 
 export default function Settings({ setShowOnboarding }: SettingsProps) {
   const { t, language, setLanguage } = useLanguage();
-  const { isPro, isVip, openProModal } = usePro();
+  const { isPro, isVip, planType, familyMembers, updateFamilyMembers, openProModal } = usePro();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [newUsername, setNewUsername] = useState('');
@@ -27,6 +28,10 @@ export default function Settings({ setShowOnboarding }: SettingsProps) {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [timezone, setTimezone] = useState<string>(Intl.DateTimeFormat().resolvedOptions().timeZone);
   
+  const [newFamilyMember, setNewFamilyMember] = useState('');
+  const [isAddingMember, setIsAddingMember] = useState(false);
+  const [familyError, setFamilyError] = useState('');
+
   const timezones = Intl.supportedValuesOf ? Intl.supportedValuesOf('timeZone') : [timezone];
 
   useEffect(() => {
@@ -150,6 +155,78 @@ export default function Settings({ setShowOnboarding }: SettingsProps) {
     }
   };
 
+  const handleAddFamilyMember = async () => {
+    if (!auth.currentUser) return;
+    if (!newFamilyMember || !newFamilyMember.includes('@')) {
+      setFamilyError('Please enter a valid email address.');
+      return;
+    }
+    if (familyMembers.length >= 5) {
+      setFamilyError('You can only add up to 5 family members.');
+      return;
+    }
+    if (familyMembers.includes(newFamilyMember)) {
+      setFamilyError('This member is already in your family plan.');
+      return;
+    }
+
+    setIsAddingMember(true);
+    setFamilyError('');
+    try {
+      const proDocRef = doc(db, 'pro_users', auth.currentUser.uid);
+      const updatedMembers = [...familyMembers, newFamilyMember];
+      await setDoc(proDocRef, { 
+        familyMembers: updatedMembers,
+        active: true,
+        email: auth.currentUser.email || ''
+      }, { merge: true });
+      
+      // Create the family member's document in pro_users so they appear in the admin panel and get PRO status reliably
+      await setDoc(doc(db, 'pro_users', newFamilyMember), {
+        email: newFamilyMember,
+        active: true,
+        createdAt: new Date().toISOString(),
+        planType: 'family_member',
+        parentPlan: auth.currentUser.uid
+      }, { merge: true });
+
+      updateFamilyMembers(updatedMembers);
+      setNewFamilyMember('');
+    } catch (error) {
+      console.error('Error adding family member:', error);
+      setFamilyError('Failed to add family member.');
+    } finally {
+      setIsAddingMember(false);
+    }
+  };
+
+  const handleRemoveFamilyMember = async (emailToRemove: string) => {
+    if (!auth.currentUser) return;
+    try {
+      const proDocRef = doc(db, 'pro_users', auth.currentUser.uid);
+      const updatedMembers = familyMembers.filter(email => email !== emailToRemove);
+      await setDoc(proDocRef, { familyMembers: updatedMembers }, { merge: true });
+      
+      // Delete the family member's document (could be by email or by UID)
+      await deleteDoc(doc(db, 'pro_users', emailToRemove));
+      
+      // Also query and delete if it was migrated to a UID
+      const q = query(
+        collection(db, 'pro_users'), 
+        where('email', '==', emailToRemove),
+        where('parentPlan', '==', auth.currentUser.uid)
+      );
+      const querySnapshot = await getDocs(q);
+      querySnapshot.forEach(async (docSnapshot) => {
+        await deleteDoc(doc(db, 'pro_users', docSnapshot.id));
+      });
+
+      updateFamilyMembers(updatedMembers);
+    } catch (error) {
+      console.error('Error removing family member:', error);
+    }
+  };
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center gap-3 mb-8">
@@ -168,14 +245,14 @@ export default function Settings({ setShowOnboarding }: SettingsProps) {
             GymTracker PRO
           </h3>
           
-          <div className="bg-black/20 border border-white/5 rounded-xl p-4 flex items-center justify-between">
+          <div className="bg-black/20 border border-white/5 rounded-xl p-4 flex items-center justify-between mb-4">
             <div>
               <div className="text-white font-medium mb-1">
                 {isPro ? 'PRO Status Active' : 'Free Plan'}
               </div>
               <div className="text-xs text-slate-400">
                 {isPro 
-                  ? (isVip ? 'Lifetime VIP Access' : 'You have full access to all AI features.')
+                  ? (isVip ? 'Lifetime VIP Access' : (planType === 'family' ? 'Family Plan' : (planType === 'family_member' ? 'Family Member Access' : 'Individual Plan')))
                   : 'Upgrade to PRO to unlock all AI features.'}
               </div>
             </div>
@@ -188,6 +265,55 @@ export default function Settings({ setShowOnboarding }: SettingsProps) {
               </button>
             )}
           </div>
+
+          {isPro && planType === 'family' && (
+            <div className="bg-black/20 border border-white/5 rounded-xl p-4">
+              <h4 className="text-white font-medium mb-3 flex items-center gap-2">
+                <Users className="w-4 h-4 text-[#1d7a82]" />
+                Family Members ({familyMembers.length}/5)
+              </h4>
+              
+              <div className="space-y-3 mb-4">
+                {familyMembers.map((email, idx) => (
+                  <div key={idx} className="flex items-center justify-between bg-white/5 rounded-lg p-3">
+                    <span className="text-slate-300 text-sm">{email}</span>
+                    <button
+                      onClick={() => handleRemoveFamilyMember(email)}
+                      className="text-slate-500 hover:text-red-400 transition-colors p-1"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+                {familyMembers.length === 0 && (
+                  <p className="text-slate-500 text-sm italic">No family members added yet.</p>
+                )}
+              </div>
+
+              {familyMembers.length < 5 && (
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="email"
+                      placeholder="Family member's email"
+                      value={newFamilyMember}
+                      onChange={(e) => setNewFamilyMember(e.target.value)}
+                      className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#1d7a82] transition-all"
+                    />
+                    <button
+                      onClick={handleAddFamilyMember}
+                      disabled={isAddingMember || !newFamilyMember}
+                      className="bg-[#1d7a82] hover:bg-[#155e63] text-white px-3 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50 flex items-center gap-1"
+                    >
+                      <Plus className="w-4 h-4" /> Add
+                    </button>
+                  </div>
+                  {familyError && <p className="text-red-400 text-xs">{familyError}</p>}
+                  <p className="text-slate-500 text-xs">Added members will automatically get PRO access when they log in with their email.</p>
+                </div>
+              )}
+            </div>
+          )}
         </section>
 
         {/* Profile Section */}

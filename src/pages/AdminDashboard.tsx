@@ -11,6 +11,7 @@ interface UserEntry {
   createdAt?: string;
   uid?: string;
   collection: 'vip' | 'pro_users';
+  planType?: 'individual' | 'family' | 'family_member';
 }
 
 export const AdminDashboard: React.FC = () => {
@@ -22,6 +23,9 @@ export const AdminDashboard: React.FC = () => {
   const [isAdding, setIsAdding] = useState(false);
   const [newEmail, setNewEmail] = useState('');
   const [newType, setNewType] = useState<'vip' | 'pro_users'>('pro_users');
+  const [proPlanType, setProPlanType] = useState<'individual' | 'family'>('individual');
+  const [userToRevoke, setUserToRevoke] = useState<UserEntry | null>(null);
+  const [alertMessage, setAlertMessage] = useState<string | null>(null);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -49,12 +53,13 @@ export const AdminDashboard: React.FC = () => {
         source: 'Firestore',
         createdAt: doc.data().createdAt,
         uid: doc.id,
-        collection: 'pro_users'
+        collection: 'pro_users',
+        planType: doc.data().planType
       }));
 
       // Combine with hardcoded PROs
       const allPros = [
-        ...PRO_EMAILS.map(email => ({ email, source: 'Hardcoded' as const, collection: 'pro_users' as const })),
+        ...PRO_EMAILS.map(email => ({ email, source: 'Hardcoded' as const, collection: 'pro_users' as const, planType: 'individual' as const })),
         ...firestorePros.filter(fp => !PRO_EMAILS.includes(fp.email))
       ];
       setPros(allPros);
@@ -80,45 +85,58 @@ export const AdminDashboard: React.FC = () => {
           email: newEmail,
           active: true,
           createdAt: new Date().toISOString()
-        });
+        }, { merge: true });
       } else {
         // For PRO, we store by email if we don't have UID
         await setDoc(doc(db, 'pro_users', newEmail), {
           email: newEmail,
           active: true,
           createdAt: new Date().toISOString(),
-          manualGrant: true
-        });
+          manualGrant: true,
+          planType: proPlanType
+        }, { merge: true });
       }
       setNewEmail('');
       await fetchUsers();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error granting status:', error);
-      alert('Failed to grant status.');
+      setAlertMessage(`Failed to grant status: ${error.message}`);
     } finally {
       setIsAdding(false);
     }
   };
 
-  const handleRevoke = async (user: UserEntry) => {
+  const handleRevoke = (user: UserEntry) => {
     if (user.source === 'Hardcoded') {
-      alert('This user is hardcoded in the source code. To remove them, you must edit the "userPermissions.ts" file.');
+      setAlertMessage('This user is hardcoded in the source code. To remove them, you must edit the "userPermissions.ts" file.');
       return;
     }
+    setUserToRevoke(user);
+  };
 
-    if (!window.confirm(`Are you sure you want to revoke status for ${user.email}?`)) return;
-
+  const confirmRevoke = async () => {
+    if (!userToRevoke) return;
+    const user = userToRevoke;
+    
     setIsRevoking(user.email);
+    setUserToRevoke(null);
     try {
       // For VIP, the ID is the email. For PRO, the ID is the UID or email.
       const docId = user.collection === 'vip' ? user.email : (user.uid || user.email);
       if (docId) {
         await deleteDoc(doc(db, user.collection, docId));
-        await fetchUsers(); // Refresh the list
       }
-    } catch (error) {
+
+      // Robust cleanup: also try to delete by email from both collections to catch manual grants
+      if (user.email) {
+        try { await deleteDoc(doc(db, 'pro_users', user.email)); } catch (e) {}
+        try { await deleteDoc(doc(db, 'vip', user.email)); } catch (e) {}
+      }
+
+      await fetchUsers(); // Refresh the list
+    } catch (error: any) {
       console.error('Error revoking status:', error);
-      alert('Failed to revoke status. Check console for details.');
+      setAlertMessage(`Failed to revoke status: ${error.message}`);
     } finally {
       setIsRevoking(null);
     }
@@ -205,6 +223,28 @@ export const AdminDashboard: React.FC = () => {
                 VIP
               </button>
             </div>
+            {newType === 'pro_users' && (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setProPlanType('individual')}
+                  className={`px-4 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all ${
+                    proPlanType === 'individual' ? 'bg-white/20 text-white' : 'bg-white/5 text-slate-400 hover:bg-white/10'
+                  }`}
+                >
+                  Individual
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setProPlanType('family')}
+                  className={`px-4 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all ${
+                    proPlanType === 'family' ? 'bg-white/20 text-white' : 'bg-white/5 text-slate-400 hover:bg-white/10'
+                  }`}
+                >
+                  Family
+                </button>
+              </div>
+            )}
             <button
               type="submit"
               disabled={isAdding}
@@ -311,6 +351,7 @@ export const AdminDashboard: React.FC = () => {
                   <thead className="text-xs text-slate-500 uppercase tracking-widest bg-black/20">
                     <tr>
                       <th className="px-6 py-4 font-semibold">Email</th>
+                      <th className="px-6 py-4 font-semibold">Plan</th>
                       <th className="px-6 py-4 font-semibold">Date</th>
                       <th className="px-6 py-4 font-semibold">Source</th>
                       <th className="px-6 py-4 font-semibold text-right">Action</th>
@@ -324,6 +365,15 @@ export const AdminDashboard: React.FC = () => {
                             <Mail className="w-4 h-4 text-slate-500" />
                             <span className="font-medium">{user.email}</span>
                           </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase tracking-wider ${
+                            user.planType === 'family' ? 'bg-blue-500/20 text-blue-400' : 
+                            user.planType === 'family_member' ? 'bg-indigo-500/20 text-indigo-400' : 
+                            'bg-slate-500/20 text-slate-400'
+                          }`}>
+                            {user.planType || 'individual'}
+                          </span>
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2 text-slate-400 text-xs">
@@ -365,6 +415,74 @@ export const AdminDashboard: React.FC = () => {
           </motion.section>
         </div>
       </div>
+
+      {/* Revoke Confirmation Modal */}
+      <AnimatePresence>
+        {userToRevoke && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-[#1e293b] border border-white/10 rounded-2xl p-6 max-w-md w-full shadow-2xl"
+            >
+              <div className="flex items-center gap-4 mb-6 text-red-500">
+                <div className="p-3 bg-red-500/10 rounded-full">
+                  <AlertTriangle className="w-6 h-6" />
+                </div>
+                <h3 className="text-xl font-bold text-white">Revoke Access</h3>
+              </div>
+              <p className="text-slate-300 mb-6">
+                Are you sure you want to revoke <span className="font-bold text-white">{userToRevoke.collection === 'vip' ? 'VIP' : 'PRO'}</span> status for <span className="font-bold text-white">{userToRevoke.email}</span>? This action cannot be undone.
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setUserToRevoke(null)}
+                  className="px-4 py-2 rounded-lg font-bold text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmRevoke}
+                  className="px-4 py-2 rounded-lg font-bold bg-red-500 hover:bg-red-600 text-white transition-colors"
+                >
+                  Yes, Revoke Access
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Alert Modal */}
+      <AnimatePresence>
+        {alertMessage && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-[#1e293b] border border-white/10 rounded-2xl p-6 max-w-md w-full shadow-2xl"
+            >
+              <div className="flex items-center gap-4 mb-6 text-blue-500">
+                <div className="p-3 bg-blue-500/10 rounded-full">
+                  <AlertTriangle className="w-6 h-6" />
+                </div>
+                <h3 className="text-xl font-bold text-white">Notice</h3>
+              </div>
+              <p className="text-slate-300 mb-6">{alertMessage}</p>
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setAlertMessage(null)}
+                  className="px-4 py-2 rounded-lg font-bold bg-blue-500 hover:bg-blue-600 text-white transition-colors"
+                >
+                  OK
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

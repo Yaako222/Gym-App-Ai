@@ -3,8 +3,6 @@ import { motion } from 'motion/react';
 import { User, Ruler, Weight, Calendar, Target, ChevronRight, X } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
-import { usePro } from '../contexts/ProContext';
-
 export interface UserData {
   weight: number;
   height: number;
@@ -19,7 +17,6 @@ interface DataCollectionModalProps {
 
 export const DataCollectionModal: React.FC<DataCollectionModalProps> = ({ onComplete }) => {
   const { t } = useLanguage();
-  const { isPro, openProModal } = usePro();
   const [data, setData] = useState<UserData>({
     weight: 70,
     height: 175,
@@ -142,46 +139,21 @@ export const DataCollectionModal: React.FC<DataCollectionModalProps> = ({ onComp
           </div>
 
           <div className="flex flex-col gap-3 pt-4">
-            {isPro ? (
-              <button
-                type="submit"
-                className="w-full bg-[#1d7a82] hover:bg-[#155e63] text-white font-black py-4 rounded-2xl transition-all glow-teal flex items-center justify-center gap-2 uppercase tracking-widest"
-              >
-                {t('createPlan')}
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            ) : (
-              <div className="bg-[#FF0050]/10 border border-[#FF0050]/30 rounded-2xl p-4 text-center">
-                <p className="text-[#FF0050] font-bold mb-2">PRO Feature</p>
-                <p className="text-slate-400 text-sm mb-3">Upgrade to PRO to get a personalized AI training plan.</p>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={openProModal}
-                    className="flex-1 bg-[#FF0050] hover:bg-[#e60048] text-white font-bold py-2 rounded-xl transition-all glow-pink"
-                  >
-                    Upgrade Now
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onComplete(null)}
-                    className="flex-1 bg-white/5 hover:bg-white/10 text-slate-400 font-bold py-2 rounded-xl transition-all"
-                  >
-                    Skip for now
-                  </button>
-                </div>
-              </div>
-            )}
+            <button
+              type="submit"
+              className="w-full bg-[#1d7a82] hover:bg-[#155e63] text-white font-black py-4 rounded-2xl transition-all glow-teal flex items-center justify-center gap-2 uppercase tracking-widest"
+            >
+              {t('createPlan')}
+              <ChevronRight className="w-5 h-5" />
+            </button>
             
-            {isPro && (
-              <button
-                type="button"
-                onClick={() => onComplete(null)}
-                className="w-full text-slate-500 hover:text-white font-bold py-2 transition-colors uppercase tracking-widest text-sm"
-              >
-                {t('skip')}
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => onComplete(null)}
+              className="w-full text-slate-500 hover:text-white font-bold py-2 transition-colors uppercase tracking-widest text-sm"
+            >
+              {t('skip')}
+            </button>
           </div>
         </form>
       </motion.div>
